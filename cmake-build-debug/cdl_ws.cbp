@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="cdl_ws"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="cdl_wp">
+				<Option output="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/cdl_wp" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 cdl_wp"/>
+					<CompileFile command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="cdl_wp/fast">
+				<Option output="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/cdl_wp" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 cdl_wp/fast"/>
+					<CompileFile command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="cdl_wc">
+				<Option output="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/cdl_wc" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 cdl_wc"/>
+					<CompileFile command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="cdl_wc/fast">
+				<Option output="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/cdl_wc" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 cdl_wc/fast"/>
+					<CompileFile command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="cdl_ws">
+				<Option output="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/cdl_ws" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 cdl_ws"/>
+					<CompileFile command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="cdl_ws/fast">
+				<Option output="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/cdl_ws" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 cdl_ws/fast"/>
+					<CompileFile command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j6 -f &quot;/mnt/c/Users/Leo/source/repos/cdl-ws/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/mnt/c/Users/Leo/source/repos/cdl-ws/client2.c">
+			<Option target="cdl_wc"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/Leo/source/repos/cdl-ws/poll.c">
+			<Option target="cdl_wp"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/Leo/source/repos/cdl-ws/server2.c">
+			<Option target="cdl_ws"/>
+		</Unit>
+		<Unit filename="/mnt/c/Users/Leo/source/repos/cdl-ws/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
