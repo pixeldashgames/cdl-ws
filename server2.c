@@ -9,7 +9,11 @@
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
+    char *response_http = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: Closed\n\n";
+    // Regen response_html
+    char *response_html = "<html><body><h1><a href=\"asd\">Hello World</h1></body></html>";
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
     int max_clients = MAX_CLIENTS;
@@ -17,11 +21,13 @@ int main(int argc, char *argv[]) {
     char buffer[BUFFER_SIZE];
     fd_set readfds;
     int clients[MAX_CLIENTS];
-    for (i = 0; i < MAX_CLIENTS; i++) clients[i] = 0;
+    for (i = 0; i < MAX_CLIENTS; i++)
+        clients[i] = 0;
 
     // create server socket
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd < 0) {
+    if (server_fd < 0)
+    {
         perror("socket");
         exit(1);
     }
@@ -29,23 +35,26 @@ int main(int argc, char *argv[]) {
     // set server address
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(1234);
+    server_addr.sin_port = htons(80);
 
     // bind socket to address
-    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
         perror("bind");
         exit(1);
     }
 
     // listen for incoming connections
-    if (listen(server_fd, MAX_CLIENTS) < 0) {
+    if (listen(server_fd, MAX_CLIENTS) < 0)
+    {
         perror("listen");
         exit(1);
     }
-    
+
     printf("Waiting for connections...\n");
 
-    while (1) {
+    while (1)
+    {
         // clear file descriptor set
         FD_ZERO(&readfds);
 
@@ -54,16 +63,19 @@ int main(int argc, char *argv[]) {
         max_sd = server_fd;
 
         // add child sockets to set
-        for (i = 0; i < max_clients; i++) {
+        for (i = 0; i < max_clients; i++)
+        {
             sd = clients[i];
 
             // add valid socket to set
-            if (sd > 0) {
+            if (sd > 0)
+            {
                 FD_SET(sd, &readfds);
             }
 
             // update max socket descriptor
-            if (sd > max_sd) {
+            if (sd > max_sd)
+            {
                 max_sd = sd;
             }
         }
@@ -71,22 +83,27 @@ int main(int argc, char *argv[]) {
         // wait for activity on sockets
         activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
 
-        if (activity < 0) {
+        if (activity < 0)
+        {
             perror("select");
             exit(1);
         }
 
         // handle incoming connection request
-        if (FD_ISSET(server_fd, &readfds)) {
+        if (FD_ISSET(server_fd, &readfds))
+        {
             socklen_t client_len = sizeof(client_addr);
-            if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len)) < 0) {
+            if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len)) < 0)
+            {
                 perror("accept");
                 exit(1);
             }
 
             // add new client to list of clients
-            for (i = 0; i < max_clients; i++) {
-                if (clients[i] == 0) {
+            for (i = 0; i < max_clients; i++)
+            {
+                if (clients[i] == 0)
+                {
                     clients[i] = client_fd;
                     printf("New connection from %s:%d, socket fd: %d\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), client_fd);
                     break;
@@ -95,25 +112,24 @@ int main(int argc, char *argv[]) {
         }
 
         // handle incoming data from client
-        for (i = 0; i < max_clients; i++) {
+        for (i = 0; i < max_clients; i++)
+        {
             sd = clients[i];
 
-            if (FD_ISSET(sd, &readfds)) {
-                if ((read(sd, buffer, BUFFER_SIZE)) == 0) {
+            if (FD_ISSET(sd, &readfds))
+            {
+                if ((read(sd, buffer, BUFFER_SIZE)) == 0)
+                {
                     // client disconnected
                     printf("Client disconnected, socket fd: %d\n", sd);
                     close(sd);
                     clients[i] = 0;
-                } else {
-                    // send message to all other clients
-                    for (int j = 0; j < max_clients; j++) {
-                        if (i != j && clients[j] > 0) {
-                            if (write(clients[j], buffer, strlen(buffer)) < 0) {
-                                perror("write");
-                                exit(1);
-                            }
-                        }
-                    }
+                }
+                else
+                {
+                    // HANDLING INCOMING DATA
+                    printf("%s\n", buffer);
+                    write(sd, response_http, strlen(response_http));
                 }
             }
         }
