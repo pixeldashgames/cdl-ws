@@ -9,12 +9,18 @@
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
 
+// To run the server : gcc server.c -o server
+//                     ./server 31431 /rootpath
 int main(int argc, char *argv[])
 {
-    int port = 31431;
+    if(argc < 3)
+        exit(1);
+    int port = atoi(argv[1]);
+    printf("%i\n",port);
+    char *root = argv[2];
 
     char *response_http = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: Closed\n\n";
-    char *response_html = "<html><body><h1><a href=\"asd\">Hello World</h1></body></html>";
+    char *response_html = "<html><head><h1>Root</h1></head><body><h1><a href=\"asd\">Hello World</h1></body></html>";
 
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
@@ -40,7 +46,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    printf("Server socket created...");
+    printf("Server socket created...\n");
 
     // set server address
     server_addr.sin_family = AF_INET;
@@ -54,7 +60,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    printf("Server socket bound to port...");
+    printf("Server socket bound to port...\n");
 
     // listen for incoming connections
     if (listen(server_fd, MAX_CLIENTS) < 0)
