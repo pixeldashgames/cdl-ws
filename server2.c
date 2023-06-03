@@ -11,14 +11,22 @@
 
 int main(int argc, char *argv[])
 {
+    int port = 31431;
+
     char *response_http = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: Closed\n\n";
-    // Regen response_html
     char *response_html = "<html><body><h1><a href=\"asd\">Hello World</h1></body></html>";
+
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
     int max_clients = MAX_CLIENTS;
-    int max_sd, activity, i, sd;
+
+    // max_sd : Max socket descriptor, ceiling for select operation
+    // sd : iterator variable (foreach sd in sockets basically)
+    int max_sd, i, sd;
+
+    // buffer : Input buffer.
     char buffer[BUFFER_SIZE];
+    // set of file descriptors for client read 'streams'
     fd_set readfds;
     int clients[MAX_CLIENTS];
     for (i = 0; i < MAX_CLIENTS; i++)
@@ -28,26 +36,30 @@ int main(int argc, char *argv[])
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0)
     {
-        perror("socket");
+        perror("Couldn't create server socket on the specified port.");
         exit(1);
     }
+
+    printf("Server socket created...");
 
     // set server address
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(80);
+    server_addr.sin_port = htons(port);
 
     // bind socket to address
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        perror("bind");
+        perror("Couldn't bind server address to socket.");
         exit(1);
     }
+
+    printf("Server socket bound to port...");
 
     // listen for incoming connections
     if (listen(server_fd, MAX_CLIENTS) < 0)
     {
-        perror("listen");
+        perror("Error trying to listen to incoming connections.");
         exit(1);
     }
 
@@ -81,21 +93,20 @@ int main(int argc, char *argv[])
         }
 
         // wait for activity on sockets
-        activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
-
-        if (activity < 0)
+        if (select(max_sd + 1, &readfds, NULL, NULL, NULL) < 0)
         {
-            perror("select");
+            perror("Error trying to wait for activity from clients.");
             exit(1);
         }
 
         // handle incoming connection request
+        // FD_ISSET checks whether there is a connection request on the server
         if (FD_ISSET(server_fd, &readfds))
         {
             socklen_t client_len = sizeof(client_addr);
             if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len)) < 0)
             {
-                perror("accept");
+                perror("Error accepting connection request from client.");
                 exit(1);
             }
 
@@ -116,6 +127,7 @@ int main(int argc, char *argv[])
         {
             sd = clients[i];
 
+            // Check whether the client is sending data.
             if (FD_ISSET(sd, &readfds))
             {
                 if ((read(sd, buffer, BUFFER_SIZE)) == 0)
@@ -130,6 +142,7 @@ int main(int argc, char *argv[])
                     // HANDLING INCOMING DATA
                     printf("%s\n", buffer);
                     write(sd, response_http, strlen(response_http));
+                    write(sd, response_html, strlen(response_html));
                 }
             }
         }
