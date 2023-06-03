@@ -1,13 +1,90 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/select.h>
 
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
+
+#define DIR_LINK_TEMPLATE "<p>&#x1F4C1 <a href=\"%s\">%s/</a></p>"
+#define FILE_LINK_TEMPLATE "<p>&#x1F4C4 <a href=\"%s\">%s</a></p>"
+
+char *get_file_name(char *p)
+{
+    int n = strlen(p);
+    char *name = malloc((n + 1) * sizeof(char));
+
+    if (p[n - 1] == '/')
+        p[--n] = '\0';
+    for (int i = n - 1; i >= 0; i--)
+    {
+        if (p[i] != '/')
+            continue;
+
+        strcpy(name, p + i + 1);
+        break;
+    }
+
+    return name;
+}
+
+// void list_files(const char *path)
+// {
+//     struct dirent *entry;
+//     DIR *dir = opendir(path);
+//
+//     if (dir == NULL)
+//     {
+//         return;
+//     }
+//
+//     while ((entry = readdir(dir)) != NULL)
+//     {
+//         if (entry->d_type == DT_DIR)
+//         {
+//             // Found a directory, but ignore "." and ".." entries
+//             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+//             {
+//                 continue;
+//             }
+//             printf("Directory: %s/%s\n", path, entry->d_name);
+//             char subpath[1024];
+//             snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
+//             list_files(subpath);
+//         }
+//         else
+//         {
+//             // Found a file
+//             printf("File: %s/%s\n", path, entry->d_name);
+//         }
+//     }
+//     closedir(dir);
+// }
+
+// returns a <a> html link for a given path.
+char *ptoa(char *p, bool isdir)
+{
+    char *template = isdir ? DIR_LINK_TEMPLATE : FILE_LINK_TEMPLATE;
+
+    int templen = strlen(template);
+
+    char *itemname = get_file_name(p);
+
+    int namelen = strlen(itemname);
+    int plen = strlen(p);
+
+    char *link = malloc((templen + plen + namelen + 1) * sizeof(char));
+
+    sprintf(link, template, p, itemname);
+
+    free(itemname);
+    return link;
+}
 
 // To run the server : gcc server.c -o server
 //                     ./server 31431 /rootpath
@@ -15,7 +92,7 @@ int main(int argc, char *argv[])
 {
     if (argc < 3)
     {
-        printf("usage: %s <server_port> <root_directory>", argv[0]);
+        printf("usage: %s <server_port> <root_directory>\n", argv[0]);
         exit(1);
     }
 
@@ -23,8 +100,14 @@ int main(int argc, char *argv[])
 
     char *root = argv[2];
 
+    if (chdir(root) != 0)
+    {
+        perror("Couldn't create server on the specified path.\n");
+        exit(1);
+    }
+
     char *response_http = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: Closed\n\n";
-    char *response_html = "<html><head><h1>Root</h1></head><body><h1><a href=\"asd\">Hello World</h1></body></html>";
+    // char *response_html = "<html><head><h1>Root</h1></head><body><h1><a href=\"asd\">Hello World</h1></body></html>";
 
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
@@ -46,7 +129,7 @@ int main(int argc, char *argv[])
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0)
     {
-        perror("Couldn't create server socket on the specified port.");
+        perror("Couldn't create server socket on the specified port.\n");
         exit(1);
     }
 
@@ -60,7 +143,7 @@ int main(int argc, char *argv[])
     // bind socket to address
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
-        perror("Couldn't bind server address to socket.");
+        perror("Couldn't bind server address to socket.\n");
         exit(1);
     }
 
@@ -69,7 +152,7 @@ int main(int argc, char *argv[])
     // listen for incoming connections
     if (listen(server_fd, MAX_CLIENTS) < 0)
     {
-        perror("Error trying to listen to incoming connections.");
+        perror("Error trying to listen to incoming connections.\n");
         exit(1);
     }
 
@@ -105,7 +188,7 @@ int main(int argc, char *argv[])
         // wait for activity on sockets
         if (select(max_sd + 1, &readfds, NULL, NULL, NULL) < 0)
         {
-            perror("Error trying to wait for activity from clients.");
+            perror("Error trying to wait for activity from clients.\n");
             exit(1);
         }
 
@@ -116,7 +199,7 @@ int main(int argc, char *argv[])
             socklen_t client_len = sizeof(client_addr);
             if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len)) < 0)
             {
-                perror("Error accepting connection request from client.");
+                perror("Error accepting connection request from client.\n");
                 exit(1);
             }
 
@@ -152,7 +235,11 @@ int main(int argc, char *argv[])
                     // HANDLING INCOMING DATA
                     printf("%s\n", buffer);
                     write(sd, response_http, strlen(response_http));
-                    write(sd, response_html, strlen(response_html));
+
+                    char *html = ptoa(root, true);
+                    write(sd, html, strlen(html));
+
+                    free(html);
                 }
             }
         }
