@@ -13,10 +13,14 @@
 //                     ./server 31431 /rootpath
 int main(int argc, char *argv[])
 {
-    if(argc < 3)
+    if (argc < 3)
+    {
+        printf("usage: %s <server_port> <root_directory>", argv[0]);
         exit(1);
+    }
+
     int port = atoi(argv[1]);
-    printf("%i\n",port);
+
     char *root = argv[2];
 
     char *response_http = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: Closed\n\n";
