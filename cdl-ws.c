@@ -89,13 +89,11 @@ char *ptoa(char *p, bool isdir)
 
 char *cmtor(char *message)
 {
-    int start_offset = 4;
-    int end = findstr(message, "HTTP") - 1;
-    int path_len = end - start_offset;
-    // printf("Path_len: %i\n", path_len);
-    char *path = malloc((path_len + 1) * sizeof(char));
-    strncpy(path, message + start_offset, path_len);
-    return path;
+    int end = findc(message, '\n');
+    struct JaggedCharArray req = splitnstr(message, ' ', end, true);
+    req.arr += 1;
+    req.count -= 1;
+    return joinarr(req, ' ', req.count - 1);
 }
 
 // To run the server : gcc server.c -o server

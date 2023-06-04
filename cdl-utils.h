@@ -37,11 +37,12 @@ bool directory_exists(const char *path);
 char *dtryget(struct Dictionary dict, char *var, int *outidx);
 int dset(struct Dictionary *dict, char *var, char *value);
 int dremove(struct Dictionary *dict, char *var);
-
-struct JaggedCharArray splitstr(char *str, char sep);
+struct JaggedCharArray splitnstr(char *str, char sep, int len, bool allowempty);
+struct JaggedCharArray splitstr(char *str, char sep, bool allowempty);
 char *joinarr(struct JaggedCharArray arr, char cep, int count);
 int findstr(char *str, char *tok);
 int extractint(char *str, int startpos, int *len);
 // replaces source[start..len] with target
 void replacestr(char *source, char *target, int start, int len);
 int readtoend(FILE *f, char *result);
+int findc(char *str, char t);
