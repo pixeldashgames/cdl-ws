@@ -90,16 +90,52 @@ char *ptoa(char *p, bool isdir)
 char *cmtor(char *message)
 {
     int end = findc(message, '\n');
+    if (end == -1)
+        end = strlen(message);
+
     struct JaggedCharArray req = splitnstr(message, ' ', end, true);
     req.arr += 1;
     req.count -= 1;
     return joinarr(req, ' ', req.count - 1);
 }
 
+int run_tests(int argc, char *argv[])
+{
+    bool ptoa_test0 = strcmp(ptoa("/home/user/mydir", true), "<p>&#x1F4C1 <a href=\"/home/user/mydir\">mydir/</a></p>") == 0;
+    printf("ptoa Dir Test: %s\n", ptoa_test0 ? "✅" : "❌");
+
+    bool ptoa_test1 = strcmp(ptoa("/home/user/myfile", true), "<p>&#x1F4C4 <a href=\"/home/user/myfile\">myfile</a></p>") == 0;
+    printf("ptoa File Test: %s\n", ptoa_test1 ? "✅" : "❌");
+
+    bool name_test0 = strcmp(get_file_name("/home/user/mydir/"), "mydir") == 0;
+    printf("get_file_name Dir Test: %s\n", name_test0 ? "✅" : "❌");
+
+    bool name_test1 = strcmp(get_file_name("/home/user/myfile"), "myfile") == 0;
+    printf("get_file_name File Test: %s\n", name_test1 ? "✅" : "❌");
+
+    bool cmtor_test0 = strcmp(cmtor("GET /home/user/my dir HTTP/1.1\nRandom Browser Data\nConnection Request"), "/home/user/my dir") == 0;
+    printf("cmtor Test 0: %s\n", cmtor_test0 ? "✅" : "❌");
+
+    bool cmtor_test1 = strcmp(cmtor("GET /home/my user/my dir/my    spaced    dir HTTP/1.1"), "/home/my user/my dir/my    spaced    dir") == 0;
+    printf("cmtor Test 1: %s\n", cmtor_test1 ? "✅" : "❌");
+
+    int correctCount = ptoa_test0 + ptoa_test1 + name_test0 + name_test1 + cmtor_test0 + cmtor_test1;
+    int total = 6;
+    bool allCorrect = correctCount == total;
+    printf("Testing Finished. Results %d/%d %s", correctCount, total, allCorrect ? "✅" : "❌");
+
+    return allCorrect ? 0 : 1;
+}
+
 // To run the server : gcc server.c -o server
 //                     ./server 31431 /rootpath
 int main(int argc, char *argv[])
 {
+    if (strcmp(argv[argc - 1], "test") == 0)
+    {
+        return run_tests(argc, argv);
+    }
+
     if (argc < 3)
     {
         printf("usage: %s <server_port> <root_directory>\n", argv[0]);
