@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <libgen.h>
 #include <time.h>
+#include "cdl-utils.h"
 
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
@@ -17,16 +18,73 @@
 #define DIR_LINK_TEMPLATE "<p>&#x1F4C1 <a href=\"%s\">%s/</a></p>"
 #define FILE_LINK_TEMPLATE "<p>&#x1F4C4 <a href=\"%s\">%s</a></p>"
 
+char *sbasename(char *p) {
+    uint n = strlen(p);
+
+    char *pcpy = malloc((n + 1) * sizeof(char));
+    strcpy(pcpy, p);
+
+    char *name = malloc((n + 1) * sizeof(char));
+
+    if (pcpy[n - 1] == '/') {
+        pcpy[--n] = '\0';
+    }
+    for (int i = (int) n - 1; i >= 0; i--) {
+        if (pcpy[i] != '/')
+            continue;
+
+        strcpy(name, pcpy + i + 1);
+        break;
+    }
+
+    free(pcpy);
+
+    return name;
+}
+
+// void list_files(const char *path)
+// {
+//     struct dirent *entry;
+//     DIR *dir = opendir(path);
+//
+//     if (dir == NULL)
+//     {
+//         return;
+//     }
+//
+//     while ((entry = readdir(dir)) != NULL)
+//     {
+//         if (entry->d_type == DT_DIR)
+//         {
+//             // Found a directory, but ignore "." and ".." entries
+//             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+//             {
+//                 continue;
+//             }
+//             printf("Directory: %s/%s\n", path, entry->d_name);
+//             char subpath[1024];
+//             snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
+//             list_files(subpath);
+//         }
+//         else
+//         {
+//             // Found a file
+//             printf("File: %s/%s\n", path, entry->d_name);
+//         }
+//     }
+//     closedir(dir);
+// }
+
 // returns a <a> html link for a given path.
 char *ptoa(char *p, bool isdir) {
     char *template = isdir ? DIR_LINK_TEMPLATE : FILE_LINK_TEMPLATE;
 
-    int templen = strlen(template);
+    size_t templen = strlen(template);
 
     char *itemname = basename(p);
 
-    int namelen = strlen(itemname);
-    int plen = strlen(p);
+    size_t namelen = strlen(itemname);
+    size_t plen = strlen(p);
 
     char *link = malloc((templen + plen + namelen + 1) * sizeof(char));
 
@@ -36,33 +94,46 @@ char *ptoa(char *p, bool isdir) {
     return link;
 }
 
-// returns the index of the first time tok is matched in str, left to right.
-int findstr(char *str, char *tok) {
-    size_t len = strlen(str);
-    size_t toklen = strlen(tok);
-    size_t q = 0; // matched chars so far
+char *cmtor(char *message) {
+    int end = findc(message, '\n');
+    if (end == -1)
+        end = (int) strlen(message);
 
-    for (int i = 0; i < len; i++) {
-        if (q > 0 && str[i] != tok[q])
-            q = 0; // this works since in the use cases for this function tokens are space separated and
-        // don't start with a space, so there is no need for a prefix function.
-        if (str[i] == tok[q])
-            q++;
-        if (q == toklen)
-            return i - q + 1;
-    }
-
-    return -1;
+    struct JaggedCharArray req = splitnstr(message, ' ', end, true);
+    req.arr += 1;
+    req.count -= 1;
+    return joinarr(req, ' ', req.count - 1);
 }
 
-char *cmtor(char *message) {
-    int start_offset = 4;
-    int end = findstr(message, "HTTP") - 1;
-    int path_len = end - start_offset;
-    // printf("Path_len: %i\n", path_len);
-    char *path = malloc((path_len + 1) * sizeof(char));
-    strncpy(path, message + start_offset, path_len);
-    return path;
+int run_tests(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[]) {
+    bool ptoa_test0 =
+            strcmp(ptoa("/home/user/mydir", true), "<p>&#x1F4C1 <a href=\"/home/user/mydir\">mydir/</a></p>") == 0;
+    printf("ptoa Dir Test: %s\n", ptoa_test0 ? "✅" : "❌");
+
+    bool ptoa_test1 =
+            strcmp(ptoa("/home/user/myfile", false), "<p>&#x1F4C4 <a href=\"/home/user/myfile\">myfile</a></p>") == 0;
+    printf("ptoa File Test: %s\n", ptoa_test1 ? "✅" : "❌");
+
+    bool name_test0 = strcmp(sbasename("/home/user/mydir/"), "mydir") == 0;
+    printf("basename Dir Test: %s\n", name_test0 ? "✅" : "❌");
+
+    bool name_test1 = strcmp(sbasename("/home/user/myfile"), "myfile") == 0;
+    printf("basename File Test: %s\n", name_test1 ? "✅" : "❌");
+
+    bool cmtor_test0 = strcmp(cmtor("GET /home/user/my dir HTTP/1.1\nRandom Browser Data\nConnection Request"),
+                              "/home/user/my dir") == 0;
+    printf("cmtor Test 0: %s\n", cmtor_test0 ? "✅" : "❌");
+
+    bool cmtor_test1 = strcmp(cmtor("GET /home/my user/my dir/my    spaced    dir HTTP/1.1"),
+                              "/home/my user/my dir/my    spaced    dir") == 0;
+    printf("cmtor Test 1: %s\n", cmtor_test1 ? "✅" : "❌");
+
+    int correctCount = ptoa_test0 + ptoa_test1 + name_test0 + name_test1 + cmtor_test0 + cmtor_test1;
+    int total = 6;
+    bool allCorrect = correctCount == total;
+    printf("Testing Finished. Results %d/%d %s", correctCount, total, allCorrect ? "✅" : "❌");
+
+    return allCorrect ? 0 : 1;
 }
 
 const char *response_http = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: Closed\n\n";
@@ -179,12 +250,16 @@ char *build_page(char *path) {
 // To run the server : gcc server.c -o server
 //                     ./server 31431 /rootpath
 int main(int argc, char *argv[]) {
+    if (strcmp(argv[argc - 1], "test") == 0) {
+        return run_tests(argc, argv);
+    }
+
     if (argc < 3) {
         printf("usage: %s <server_port> <root_directory>\n", argv[0]);
         exit(1);
     }
 
-    int port = atoi(argv[1]);
+    int port = (int) strtol(argv[1], NULL, 10);
 
     char *root = argv[2];
 

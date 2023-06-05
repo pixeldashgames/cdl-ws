@@ -8,10 +8,26 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c0979e71-a716-4903-a903-4276d3a1e86a" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/build/.cmake/api/v1/query/client-vscode/query.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/CMakeCache.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/CMakeFiles/3.22.1/CMakeCCompiler.cmake" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/CMakeFiles/3.22.1/CMakeDetermineCompilerABI_C.bin" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/CMakeFiles/3.22.1/CMakeSystem.cmake" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/CMakeFiles/3.22.1/CompilerIdC/CMakeCCompilerId.c" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/CMakeFiles/3.22.1/CompilerIdC/a.out" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/CMakeFiles/cmake.check_cache" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/Testing/20230604-0439/Test.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/Testing/TAG" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/Testing/Temporary/CTestCostData.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/cdl-text-utils.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/cdl-utils.c" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/cdl-utils.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/server2" beforeDir="false" afterPath="$PROJECT_DIR$/server2" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server2.c" beforeDir="false" afterPath="$PROJECT_DIR$/server2.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cdl-ws.c" beforeDir="false" afterPath="$PROJECT_DIR$/cdl-ws.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server" beforeDir="false" afterPath="$PROJECT_DIR$/server" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server2.c" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,28 +52,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;rearrange.code.on.save&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.ide.settings.new.ui&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "Merging main",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Users/Leo/source/repos/cdl-ws/cdl-utils.h",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
-    <configuration name="server2.c" type="CppFileRunConfiguration" factoryName="CppFileRunConfiguration" PROGRAM_PARAMS="31432 /home/campione/source" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" WORKING_DIR="file://$PROJECT_DIR$" PASS_PARENT_ENVS_2="true" PROJECT_NAME="cdl-ws" TARGET_NAME="server2.c" CONFIG_NAME="server2.c">
-      <option name="sourceFile" value="server2.c" />
+    <configuration name="Run Tests" type="CppFileRunConfiguration" factoryName="CppFileRunConfiguration" PROGRAM_PARAMS="test" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="cdl-ws" TARGET_NAME="cdl-ws.c" CONFIG_NAME="Run Tests">
+      <option name="compilerOptions" value="cdl-utils.c" />
+      <option name="sourceFile" value="cdl-ws.c" />
       <method v="2">
         <option name="com.jetbrains.cidr.cpp.runfile.CppFileBuildBeforeRunTaskProvider$BasicBuildBeforeRunTask" enabled="true" />
       </method>
@@ -66,26 +84,52 @@
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="c0979e71-a716-4903-a903-4276d3a1e86a" name="Changes" comment="" />
-      <created>1685768939838</created>
+      <changelist id="3fb123ca-41bb-409a-91f7-05318c38b5e4" name="Changes" comment="" />
+      <created>1685584796930</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1685768939838</updated>
-      <workItem from="1685768941578" duration="3010000" />
-      <workItem from="1685813756248" duration="20230000" />
-      <workItem from="1685936837349" duration="2734000" />
-      <workItem from="1685939670242" duration="2063000" />
+      <updated>1685584796930</updated>
+      <workItem from="1685584799435" duration="2493000" />
+      <workItem from="1685928968743" duration="4791000" />
+      <workItem from="1685934218515" duration="2000" />
     </task>
+    <task id="LOCAL-00001" summary="Added CLion Configuration">
+      <created>1685585011522</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1685585011523</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Added gitignore">
+      <created>1685929896698</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1685929896698</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
-  <component name="TypeScriptGeneratedFilesManager">
-    <option name="version" value="3" />
+  <component name="VCPKGProject">
+    <isAutomaticEditVcpkgJson value="false" />
+    <isAutomaticCheckingOnLaunch value="false" />
+    <isAutomaticFoundErrors value="true" />
+    <isAutomaticFoundErrors value="true" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
-  </component>
-  <component name="XSLT-Support.FileAssociations.UIState">
-    <expand />
-    <select />
+    <MESSAGE value="Added CLion Configuration" />
+    <MESSAGE value="Added gitignore" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added gitignore" />
   </component>
 </project>

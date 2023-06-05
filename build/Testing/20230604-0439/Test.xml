@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20230604-0439-Experimental"
+	Name="(empty)"
+	Generator="ctest-3.22.1"
+	CompilerName=""
+	CompilerVersion=""
+	OSName="Linux"
+	Hostname="leo-laptop"
+	OSRelease="5.10.16.3-microsoft-standard-WSL2"
+	OSVersion="#1 SMP Fri Apr 2 22:23:49 UTC 2021"
+	OSPlatform="x86_64"
+	Is64Bits="1"
+	VendorString="GenuineIntel"
+	VendorID="Intel Corporation"
+	FamilyID="6"
+	ModelID="154"
+	ProcessorCacheSize="12288"
+	NumberOfLogicalCPU="12"
+	NumberOfPhysicalCPU="6"
+	TotalVirtualMemory="2048"
+	TotalPhysicalMemory="5775"
+	LogicalProcessorsPerPhysical="2"
+	ProcessorClockFrequency="2496"
+	>
+	<Testing>
+		<StartDateTime>Jun 04 00:39 CDT</StartDateTime>
+		<StartTestTime>1685853552</StartTestTime>
+		<TestList/>
+		<EndDateTime>Jun 04 00:39 CDT</EndDateTime>
+		<EndTestTime>1685853552</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

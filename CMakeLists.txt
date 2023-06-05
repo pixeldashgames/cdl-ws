@@ -3,6 +3,4 @@ project(cdl_ws C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(cdl_ws server2.c)
-add_executable(cdl_wc client2.c)
-add_executable(cdl_wp poll.c)
+add_executable(cdl_ws cdl-utils.c cdl-ws.c)
