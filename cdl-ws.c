@@ -6,6 +6,9 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/select.h>
 #include "cdl-utils.h"
 
@@ -15,13 +18,18 @@
 #define DIR_LINK_TEMPLATE "<p>&#x1F4C1 <a href=\"%s\">%s/</a></p>"
 #define FILE_LINK_TEMPLATE "<p>&#x1F4C4 <a href=\"%s\">%s</a></p>"
 
-char *basename(char *p) {
+#define HTTP_HTML_HEADER "HTTP/1.1 200 OK\nContent-Type: text/plain\nConnection: close\n\n"
+#define HTTP_FILE_HEADER "HTTP/1.1 200 OK\nContent-Type: application/octet-stream\nContent-Disposition: attachment; filename=\"%s\"\nContent-Length: %zu\n\n"
+
+// returns the directory or file name indicated by a path, i.e. "myitem" in /home/user/myitem
+char *sbasename(char *p) {
     uint n = strlen(p);
 
     char *pcpy = malloc((n + 1) * sizeof(char));
     strcpy(pcpy, p);
 
     char *name = malloc((n + 1) * sizeof(char));
+    name[0] = '\0';
 
     if (pcpy[n - 1] == '/') {
         pcpy[--n] = '\0';
@@ -34,43 +42,13 @@ char *basename(char *p) {
         break;
     }
 
+    if (strcmp(name, "") == 0)
+        strcpy(name, pcpy);
+
     free(pcpy);
 
     return name;
 }
-
-// void list_files(const char *path)
-// {
-//     struct dirent *entry;
-//     DIR *dir = opendir(path);
-//
-//     if (dir == NULL)
-//     {
-//         return;
-//     }
-//
-//     while ((entry = readdir(dir)) != NULL)
-//     {
-//         if (entry->d_type == DT_DIR)
-//         {
-//             // Found a directory, but ignore "." and ".." entries
-//             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-//             {
-//                 continue;
-//             }
-//             printf("Directory: %s/%s\n", path, entry->d_name);
-//             char subpath[1024];
-//             snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
-//             list_files(subpath);
-//         }
-//         else
-//         {
-//             // Found a file
-//             printf("File: %s/%s\n", path, entry->d_name);
-//         }
-//     }
-//     closedir(dir);
-// }
 
 // returns a <a> html link for a given path.
 char *ptoa(char *p, bool isdir) {
@@ -78,7 +56,7 @@ char *ptoa(char *p, bool isdir) {
 
     size_t templen = strlen(template);
 
-    char *itemname = basename(p);
+    char *itemname = sbasename(p);
 
     size_t namelen = strlen(itemname);
     size_t plen = strlen(p);
@@ -91,7 +69,8 @@ char *ptoa(char *p, bool isdir) {
     return link;
 }
 
-char *cmtor(char *message) {
+// returns a request path extracted from a given client message
+char *cmtorp(char *message) {
     int end = findc(message, '\n');
     if (end == -1)
         end = (int) strlen(message);
@@ -100,6 +79,32 @@ char *cmtor(char *message) {
     req.arr += 1;
     req.count -= 1;
     return joinarr(req, ' ', req.count - 1);
+}
+
+// sends a file     to a client socket
+size_t sendfile_p(char *p, int clientfd) {
+    int fd = open(p, O_RDONLY);
+
+    // file info, size etc.
+    struct stat st;
+    fstat(fd, &st);
+
+    char *fname = sbasename(p);
+
+    // http header for the file
+    char *header = malloc((strlen(HTTP_FILE_HEADER) + strlen(fname) + 24) * sizeof(char));
+    sprintf(header, HTTP_FILE_HEADER, fname, st.st_size);
+
+    write(clientfd, header, strlen(header));
+
+    // how much of the file has been sent
+    off_t offset = 0;
+
+    size_t rc = sendfile(clientfd, fd, &offset, (size_t) st.st_size);
+
+    close(fd);
+
+    return rc;
 }
 
 int run_tests(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[]) {
@@ -111,19 +116,19 @@ int run_tests(__attribute__((unused)) int argc, __attribute__((unused)) char *ar
             strcmp(ptoa("/home/user/myfile", false), "<p>&#x1F4C4 <a href=\"/home/user/myfile\">myfile</a></p>") == 0;
     printf("ptoa File Test: %s\n", ptoa_test1 ? "✅" : "❌");
 
-    bool name_test0 = strcmp(basename("/home/user/mydir/"), "mydir") == 0;
-    printf("basename Dir Test: %s\n", name_test0 ? "✅" : "❌");
+    bool name_test0 = strcmp(sbasename("/home/user/mydir/"), "mydir") == 0;
+    printf("sbasename Dir Test: %s\n", name_test0 ? "✅" : "❌");
 
-    bool name_test1 = strcmp(basename("/home/user/myfile"), "myfile") == 0;
-    printf("basename File Test: %s\n", name_test1 ? "✅" : "❌");
+    bool name_test1 = strcmp(sbasename("/home/user/myfile"), "myfile") == 0;
+    printf("sbasename File Test: %s\n", name_test1 ? "✅" : "❌");
 
-    bool cmtor_test0 = strcmp(cmtor("GET /home/user/my dir HTTP/1.1\nRandom Browser Data\nConnection Request"),
+    bool cmtor_test0 = strcmp(cmtorp("GET /home/user/my dir HTTP/1.1\nRandom Browser Data\nConnection Request"),
                               "/home/user/my dir") == 0;
-    printf("cmtor Test 0: %s\n", cmtor_test0 ? "✅" : "❌");
+    printf("cmtorp Test 0: %s\n", cmtor_test0 ? "✅" : "❌");
 
-    bool cmtor_test1 = strcmp(cmtor("GET /home/my user/my dir/my    spaced    dir HTTP/1.1"),
+    bool cmtor_test1 = strcmp(cmtorp("GET /home/my user/my dir/my    spaced    dir HTTP/1.1"),
                               "/home/my user/my dir/my    spaced    dir") == 0;
-    printf("cmtor Test 1: %s\n", cmtor_test1 ? "✅" : "❌");
+    printf("cmtorp Test 1: %s\n", cmtor_test1 ? "✅" : "❌");
 
     int correctCount = ptoa_test0 + ptoa_test1 + name_test0 + name_test1 + cmtor_test0 + cmtor_test1;
     int total = 6;
@@ -136,6 +141,8 @@ int run_tests(__attribute__((unused)) int argc, __attribute__((unused)) char *ar
 // To run the server : gcc server.c -o server
 //                     ./server 31431 /rootpath
 int main(int argc, char *argv[]) {
+
+#pragma region Server Initialization
     if (strcmp(argv[argc - 1], "test") == 0) {
         return run_tests(argc, argv);
     }
@@ -153,8 +160,6 @@ int main(int argc, char *argv[]) {
         perror("Couldn't create server on the specified path.\n");
         exit(1);
     }
-
-    char *response_http = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: Closed\n\n";
 
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
@@ -202,7 +207,11 @@ int main(int argc, char *argv[]) {
 
     printf("Waiting for connections...\n");
 
+#pragma endregion
+
     while (1) {
+
+#pragma region File Descriptor Set Initialization
         // clear file descriptor set
         FD_ZERO(&readfds);
 
@@ -224,6 +233,7 @@ int main(int argc, char *argv[]) {
                 max_sd = sd;
             }
         }
+#pragma endregion
 
         // wait for activity on sockets
         if (select(max_sd + 1, &readfds, NULL, NULL, NULL) < 0) {
@@ -231,6 +241,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
+#pragma region Connection Requests
         // handle incoming connection request
         // FD_ISSET checks whether there is a connection request on the server
         if (FD_ISSET(server_fd, &readfds)) {
@@ -250,6 +261,7 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
+#pragma endregion
 
         // handle incoming data from client
         for (i = 0; i < max_clients; i++) {
@@ -269,15 +281,19 @@ int main(int argc, char *argv[]) {
                     printf("End buffer --------------\n");
                     printf("Start test-------------\n");
 
-                    // char *path = cmtor(buffer);
-                    // printf("Path: %s\n", path);
+                    char *path = cmtorp(buffer);
+                    printf("Path: %s\n", path);
                     printf("End test-------------\n");
-                    write(sd, response_http, strlen(response_http));
 
-                    char *html = ptoa(root, true);
-                    write(sd, html, strlen(html));
-
-                    free(html);
+                    if (strcmp(path, "/coco.jpeg") == 0) {
+                        size_t sent = sendfile_p("coco.jpeg", sd);
+                        printf("Sent %zu bytes\n", sent);
+                    } else {
+                        write(sd, HTTP_HTML_HEADER, strlen(HTTP_HTML_HEADER));
+                        char *html = ptoa("coco.jpeg", false);
+                        write(sd, html, strlen(html));
+                        free(html);
+                    }
                 }
             }
         }
