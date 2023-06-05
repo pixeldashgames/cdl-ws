@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/select.h>
+#include <sys/stat.h>
+#include <libgen.h>
+#include <time.h>
 
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
@@ -14,63 +17,13 @@
 #define DIR_LINK_TEMPLATE "<p>&#x1F4C1 <a href=\"%s\">%s/</a></p>"
 #define FILE_LINK_TEMPLATE "<p>&#x1F4C4 <a href=\"%s\">%s</a></p>"
 
-char *get_file_name(char *p) {
-    int n = strlen(p);
-    char *name = malloc((n + 1) * sizeof(char));
-
-    if (p[n - 1] == '/')
-        p[--n] = '\0';
-    for (int i = n - 1; i >= 0; i--) {
-        if (p[i] != '/')
-            continue;
-
-        strcpy(name, p + i + 1);
-        break;
-    }
-
-    return name;
-}
-
-// void list_files(const char *path)
-// {
-//     struct dirent *entry;
-//     DIR *dir = opendir(path);
-//
-//     if (dir == NULL)
-//     {
-//         return;
-//     }
-//
-//     while ((entry = readdir(dir)) != NULL)
-//     {
-//         if (entry->d_type == DT_DIR)
-//         {
-//             // Found a directory, but ignore "." and ".." entries
-//             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-//             {
-//                 continue;
-//             }
-//             printf("Directory: %s/%s\n", path, entry->d_name);
-//             char subpath[1024];
-//             snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
-//             list_files(subpath);
-//         }
-//         else
-//         {
-//             // Found a file
-//             printf("File: %s/%s\n", path, entry->d_name);
-//         }
-//     }
-//     closedir(dir);
-// }
-
 // returns a <a> html link for a given path.
 char *ptoa(char *p, bool isdir) {
     char *template = isdir ? DIR_LINK_TEMPLATE : FILE_LINK_TEMPLATE;
 
     int templen = strlen(template);
 
-    char *itemname = get_file_name(p);
+    char *itemname = basename(p);
 
     int namelen = strlen(itemname);
     int plen = strlen(p);
@@ -79,7 +32,7 @@ char *ptoa(char *p, bool isdir) {
 
     sprintf(link, template, p, itemname);
 
-    free(itemname);
+    //free(itemname);
     return link;
 }
 
@@ -112,6 +65,117 @@ char *cmtor(char *message) {
     return path;
 }
 
+const char *response_http = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: Closed\n\n";
+const char *response_html = "<html><head><h1>Root</h1></head><body><table><tr><th>Name</th><th>Size</th><th>Date</th></tr>%s</table></body></html>";
+
+int count_entries(char *path) {
+    DIR *dir;
+    struct dirent *dir_entry;
+    int count = 0;
+    if ((dir = opendir(path)) != NULL) {
+        while ((dir_entry = readdir(dir)) != NULL) count++;
+        closedir(dir);
+    } else {
+        perror("Unable to open directory");
+        return -1;
+    }
+    return count;
+}
+
+char *create_tr(char *path) {
+    DIR *dir;
+    struct dirent *dir_entry;
+    struct stat file_stat;
+    if (stat(path, &file_stat) != 0) {
+        perror("Error getting stats");
+        return NULL;
+    }
+
+    size_t length = 0;
+
+    char *name = ptoa(path, S_ISDIR(file_stat.st_mode));
+    length += strlen(name) + 9;
+    printf("NAME: %s\n", name);
+
+    long size = S_ISDIR(file_stat.st_mode) ? 0 : file_stat.st_size;
+    char c_size[sizeof(size_t)];
+    strcpy(c_size, "%ld");
+    sprintf(c_size, "%ld", size);
+    length += strlen(c_size);
+    printf("SIZE: %ld\n", size);
+
+    char *date = ctime(&file_stat.st_mtime);
+    date[strlen(date) - 1] = '\0';
+    length += strlen(date) + 9;
+    printf("DATE: %s\n", date);
+
+
+    char *row = malloc((length + 1) * sizeof(char));
+    row[0] = '\0';
+
+    sprintf(row, "<tr>%s</tr><tr>%s</tr><tr>%s</tr>", name, c_size, date);
+    printf("ROW: %s\n", row);
+    return row;
+}
+
+// TODO: Allow to create a table with multiples properties
+char *build_page(char *path) {
+    DIR *dir;
+    struct dirent *dir_entry;
+    int entries_count = count_entries(path);
+    int i = 0;
+    // TODO: make a page for wrong paths
+
+    size_t page_len = strlen(response_http) + strlen(response_html);
+    size_t table_len = 0;
+    char **entries = malloc(entries_count * sizeof(char *));
+
+    if ((dir = opendir(path)) != NULL) {
+        printf("open dir OK\n");
+        while ((dir_entry = readdir(dir)) != NULL) {
+            if (strcmp(dir_entry->d_name, ".") == 0 || strcmp(dir_entry->d_name, "..") == 0) {
+                continue; // skip current and parent directories
+            }
+            printf("read dir OK\n");
+            size_t fp_len = strlen(path) + strlen(dir_entry->d_name) + 2;
+            printf("fp_len: %ld\n", fp_len);
+            char *full_path = malloc(fp_len * sizeof(char));
+            full_path[0] = '\0';
+            sprintf(full_path, "%s/%s", path, dir_entry->d_name);
+            char *row = create_tr(full_path);
+            size_t row_len = strlen(row);
+            table_len += row_len;
+            entries[i++] = row;
+            free(full_path);
+        }
+    }
+
+    page_len += table_len;
+    printf("table_len: %ld\n", table_len);
+    printf("f_row %s\n", entries[0]);
+    //Create table
+    char *table = malloc((table_len + 1) * sizeof(char));
+    memset(table, 0, (table_len + 1) * sizeof(char));
+    for (int j = 0; j < entries_count; j++) {
+        printf("entry size: %ld\n", strlen(entries[j]));
+        strcat(table, entries[j]);
+    }
+
+    // Create html
+    char *html = malloc((strlen(response_html) + table_len + 1) * sizeof(char));
+
+    sprintf(html, response_html, table);
+    free(table);
+
+    //Create page
+    char *page = malloc((page_len + 1) * sizeof(char));
+    strcpy(page, response_http);
+    strcat(page, html);
+    free(html);
+
+    return page;
+}
+
 // To run the server : gcc server.c -o server
 //                     ./server 31431 /rootpath
 int main(int argc, char *argv[]) {
@@ -124,13 +188,13 @@ int main(int argc, char *argv[]) {
 
     char *root = argv[2];
 
-    if (chdir(root) != 0) {
-        perror("Couldn't create server on the specified path.\n");
-        exit(1);
+    if (access(root, F_OK) == -1) {
+        printf("%s is not a valid path.\n", root);
     }
-
-    char *response_http = "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: Closed\n\n";
-    // char *response_html = "<html><head><h1>Root</h1></head><body><h1><a href=\"asd\">Hello World</h1></body></html>";
+    //if (chdir(root) != 0) {
+    //    perror("Couldn't create server on the specified path.\n");
+    //    exit(1);
+    //}
 
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
@@ -244,17 +308,19 @@ int main(int argc, char *argv[]) {
                     printf("%s\n", buffer);
                     printf("End buffer --------------\n");
                     printf("Start test-------------\n");
-
-                    
-                    // char *path = cmtor(buffer);
-                    // printf("Path: %s\n", path);
+                    char *path = cmtor(buffer);
+                    bool sum = true;
+                    if (strcmp(path, "/") == 0)
+                        sum = false;
+                    char *full_path = malloc((strlen(root) + ((sum) ? strlen(path) : 0) + 1) * sizeof(char));
+                    strcpy(full_path, root);
+                    if (sum)
+                        strcat(full_path, path);
+                    free(path);
+                    char *page = build_page(full_path);
+                    free(full_path);
+                    write(sd, page, strlen(page));
                     printf("End test-------------\n");
-                    write(sd, response_http, strlen(response_http));
-
-                    char *html = ptoa(root, true);
-                    write(sd, html, strlen(html));
-
-                    free(html);
                 }
             }
         }
