@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>cdl-ws</title>
+    <style>
+        body {
+            background: #f2f2f2;
+        }
+
+        #table {
+            font-family: sans-serif;
+            background: white;
+            color: black;
+            width: 90%;
+            margin-left: 5%;
+            margin-right: 5%;
+            font-size: 14pt;
+            border-collapse: collapse;
+            box-shadow: 0 0 10px rgba(114, 114, 113, 0.5);
+            overflow: hidden;
+            border-radius: 15px;
+        }
+
+        .first {
+            background: darkgreen;
+            color: white;
+            height: 50px;
+        }
+
+        .rows {
+            background: white;
+            color: black;
+        }
+
+        #table tbody tr:hover {
+            background-color: #ddd;
+        }
+
+        #table tfoot tr:hover {
+            background-color: #ddd;
+        }
+
+        #table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        /* Create classes for cells and define styles for them */
+        .text {
+            text-align: left;
+            padding-left: 24px;
+            padding-top: 5px;
+            width: 150px;
+        }
+
+        .number {
+            text-align: right;
+            padding-left: 50px;
+            padding-right: 25px;
+            padding-top: 5px;
+            width: 100px;
+        }
+
+    </style>
+</head>
+<body>
+<h1 style="text-align: center; font-family: monospace">
+    cdl-ws
+</h1>
+<table id="table">
+    <thead class="first">
+    <tr>
+        <th class="text">Name</th>
+        <th class="number">Size</th>
+        <th class="text">Date Modified</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!--<tr>
+        <td class="text"><a href="../">Parent Directory</a></td>
+        <td class="number">-</td>
+        <td class="text">-</td>
+    </tr>
+    <tr>
+        <td class="text"><a href="../">Parent Directory</a></td>
+        <td class="number">-</td>
+        <td class="text">-</td>
+    </tr>
+    <tr>
+        <td class="text"><a href="../">Parent Directory</a></td>
+        <td class="number">-</td>
+        <td class="text">-</td>
+    </tr>-->
+    %s
+    </tbody>
+</table>
+</body>
+</html>

@@ -181,7 +181,7 @@ void replacestr(char *source, char *target, int start, int len) {
     free(buffer);
 }
 
-int readtoend(FILE *f, char *result) {
+char *readtoend(FILE *f) {
     long file_size;
     char *buffer;
 
@@ -191,7 +191,7 @@ int readtoend(FILE *f, char *result) {
     fseek(f, 0, SEEK_SET);
 
     // Allocate memory for the buffer
-    buffer = malloc((file_size + 1) * sizeof(char));
+    buffer = calloc(file_size + 1, sizeof(char));
 
     // Read the entire file into the buffer
     fread(buffer, file_size, 1, f);
@@ -199,7 +199,7 @@ int readtoend(FILE *f, char *result) {
     // Add a null terminator to the end of the buffer
     buffer[file_size] = '\0';
 
-    return file_size;
+    return buffer;
 }
 
 char *dtryget(struct Dictionary dict, char *var, int *outidx) {

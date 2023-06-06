@@ -19,8 +19,12 @@
 #define DIR_LINK_TEMPLATE "<p>&#x1F4C1 <a href=\"%s\">%s/</a></p>"
 #define FILE_LINK_TEMPLATE "<p>&#x1F4C4 <a href=\"%s\">%s</a></p>"
 
-#define HTTP_HTML_HEADER "HTTP/1.1 200 OK\nContent-Type: text/plain\nConnection: close\n\n"
+#define HTTP_HTML_HEADER "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: close\n\n"
 #define HTTP_FILE_HEADER "HTTP/1.1 200 OK\nContent-Type: application/octet-stream\nContent-Disposition: attachment; filename=\"%s\"\nContent-Length: %zu\n\n"
+#define HTTP_404_HEADER "HTTP/1.1 404 Not Found\nContent-Type: text/html\nConnection: close\n\n"
+
+#define HTML_404_BODY "<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested URL was not found on this server.</p></body></html>"
+#define HTML_TR_TEMPLATE "<tr class=\"rows\">\n<td class=\"text\">\n%s\n</td>\n<td class=\"number\">\n%zu\n</td>\n<td class=\"text\">\n%s\n</td>\n</tr>\n"
 
 // returns a <a> html link for a given path.
 char *ptoa(char *p, bool isdir) {
@@ -130,60 +134,60 @@ char *create_tr(char *path) {
         return NULL;
     }
 
-    size_t length = 2048;
+    size_t length = strlen(HTML_TR_TEMPLATE);
 
     char *name = ptoa(path, S_ISDIR(file_stat.st_mode));
-//    length += strlen(name) + 9;
-    printf("NAME: %s\n", name);
+    length += strlen(name);
 
     size_t size = S_ISDIR(file_stat.st_mode) ? 0 : file_stat.st_size;
-    char c_size[24];
-    sprintf(c_size, "%zu", size);
-//    length += strlen(c_size);
-    printf("SIZE: %ld\n", size);
+    length += 20; // 20 is the max length of a size_t (18446744073709551615)
 
     char *date = ctime(&file_stat.st_mtime);
-    date[strlen(date) - 1] = '\0';
-//    length += strlen(date) + 9;
-    printf("DATE: %s\n", date);
+    size_t date_len = strlen(date);
+    date[date_len] = '\0';
+    length += date_len;
 
-    char *row = malloc((length + 1) * sizeof(char));
+    char *row = calloc(length + 1, sizeof(char));
 
-    sprintf(row, "<tr>%s</tr><tr>%s</tr><tr>%s</tr>", name, c_size, date);
-    printf("ROW: %s\n", row);
+    sprintf(row, HTML_TR_TEMPLATE, name, size, date);
+
     return row;
 }
 
 // TODO: Allow to create a table with multiples properties
-char *build_page(char *path) {
-    struct dirent *dir_entry;
-    int entries_count = count_entries(path);
-    int i;
-    // TODO: make a page for wrong paths
+char *build_page(char *path, char *page_template) {
+    // TODO: make a page for wrong paths    
+    // TODO: remove / from the end of path if it exists
 
-    size_t page_len = strlen(HTTP_HTML_HEADER);
+    printf("page template : %s", page_template);
+
+    struct dirent *dir_entry;
+    int i;
+    int entries_count = count_entries(path);
+
+    size_t page_len = strlen(page_template);
     size_t table_len = 0;
+
     char **entries = malloc(entries_count * sizeof(char *));
-    for (i = 0; i < entries_count; ++i) {
+    for (i = 0; i < entries_count; ++i)
         entries[i] = NULL;
-    }
 
     i = 0;
     DIR *dir = opendir(path);
 
     if (dir != NULL) {
-        printf("open dir OK\n");
         while ((dir_entry = readdir(dir)) != NULL) {
-            if (strcmp(dir_entry->d_name, ".") == 0 || strcmp(dir_entry->d_name, "..") == 0) {
-                continue; // skip current and parent directories
+            if (strcmp(dir_entry->d_name, ".") == 0 /*|| strcmp(dir_entry->d_name, "..") == 0*/) {
+                continue; // skip current directory
             }
-            printf("read dir OK\n");
+
+            // full path = path/dir
             size_t fp_len = strlen(path) + strlen(dir_entry->d_name) + 2;
-            printf("fp_len: %ld\n", fp_len);
             char full_path[fp_len];
             sprintf(full_path, "%s/%s", path, dir_entry->d_name);
+
             entries[i] = create_tr(full_path);
-            printf("Entry %d :%s\n", i, entries[i]);
+
             size_t row_len = strlen(entries[i]);
             table_len += row_len;
 
@@ -192,37 +196,31 @@ char *build_page(char *path) {
     }
 
     page_len += table_len;
-    printf("table_len: %ld\n", table_len);
-    printf("f_row %s\n", entries[0]);
-    //Create table
-    char *table = calloc(table_len + 1, sizeof(char));
+
+    //Create tableRows
+    char *tableRows = calloc(table_len + 1, sizeof(char));
 
     char *en = NULL;
 
     for (i = 0; i < entries_count; i++) {
         en = entries[i];
-        if (en == NULL) {
-            printf("Entry %d is NULL\n", i);
+        if (en == NULL)
             continue;
-        }
 
-        printf("entry size: %ld\n", strlen(en));
-        strcat(table, en);
+        strcat(tableRows, en);
         free(en);
     }
 
     free(entries);
 
     // Create html
-    char *html = calloc(table_len + 1, sizeof(char));
-
-    strcpy(html, table);
-    free(table);
-
-    //Create page
     char *page = calloc(page_len + 1, sizeof(char));
-    sprintf(page, "%s%s", HTTP_HTML_HEADER, html);
-    free(html);
+
+    sprintf(page, page_template, tableRows);
+
+    //printf("template: %s\nrows: %s\npage: %s", page_template, tableRows, page);
+
+    free(tableRows);
 
     return page;
 }
@@ -230,7 +228,6 @@ char *build_page(char *path) {
 // To run the server : gcc server.c -o server
 //                     ./server 31431 /rootpath
 int main(int argc, char *argv[]) {
-
 #pragma region Server Initialization
     if (strcmp(argv[argc - 1], "test") == 0) {
         return run_tests(argc, argv);
@@ -245,13 +242,26 @@ int main(int argc, char *argv[]) {
 
     char *root = argv[2];
 
-    if (access(root, F_OK) == -1) {
-        printf("%s is not a valid path.\n", root);
+//    if (access(root, F_OK) == -1) {
+//        printf("%s is not a valid path.\n", root);
+//    }
+
+    // Read the page HTML template
+    FILE *templatef = fopen("template.html", "r");
+    struct stat templateStats = {};
+    if (fstat(fileno(templatef), &templateStats) != 0) {
+        perror("Failed to find template.html");
+        exit(1);
     }
-    //if (chdir(root) != 0) {
-    //    perror("Couldn't create server on the specified path.\n");
-    //    exit(1);
-    //}
+    char *page_template = readtoend(templatef);
+    fclose(templatef);
+
+    printf("page template : %s\n", page_template);
+
+    if (chdir(root) != 0) {
+        perror("Couldn't create server on the specified path.\n");
+        exit(1);
+    }
 
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
@@ -369,37 +379,42 @@ int main(int argc, char *argv[]) {
                     clients[i] = 0;
                 } else {
                     // HANDLING INCOMING DATA
-                    printf("Start buffer-------------\n");
-                    printf("%s\n", buffer);
-                    printf("End buffer --------------\n");
-                    printf("Start test-------------\n");
                     char *path = cmtorp(buffer);
-                    bool sum = true;
-                    if (strcmp(path, "/") == 0)
-                        sum = false;
-                    char *full_path = malloc((strlen(root) + ((sum) ? strlen(path) : 0) + 1) * sizeof(char));
-                    strcpy(full_path, root);
-                    if (sum)
-                        strcat(full_path, path);
-                    char *page = build_page(full_path);
-                    free(full_path);
-                    write(sd, page, strlen(page));
-                    printf("End test-------------\n");
 
-                    if (strcmp(path, "/coco.jpeg") == 0) {
-                        size_t sent = sendfile_p("coco.jpeg", sd);
-                        printf("Sent %zu bytes\n", sent);
-                    } else {
-                        write(sd, HTTP_HTML_HEADER, strlen(HTTP_HTML_HEADER));
-                        char *html = ptoa("coco.jpeg", false);
-                        write(sd, html, strlen(html));
-                        free(html);
-                    }
+//                    bool sum = true;
+//                    if (strcmp(path, "/") == 0)
+//                        sum = false;
+//                    char *full_path = malloc((strlen(root) + ((sum) ? strlen(path) : 0) + 1) * sizeof(char));
+//                    strcpy(full_path, root);
+//                    if (sum)
+//                        strcat(full_path, path);
+
+                    char *page = build_page(path, page_template);
+
+//                    free(full_path);
+
+                    printf("Page: %s\n", page);
+                    fflush(stdout);
+
+                    write(sd, HTTP_HTML_HEADER, strlen(HTTP_HTML_HEADER));
+                    write(sd, page, strlen(page));
+
+//                    if (strcmp(path, "/coco.jpeg") == 0) {
+//                        size_t sent = sendfile_p("coco.jpeg", sd);
+//                        printf("Sent %zu bytes\n", sent);
+//                    } else {
+//                        write(sd, HTTP_HTML_HEADER, strlen(HTTP_HTML_HEADER));
+//                        char *html = ptoa("coco.jpeg", false);
+//                        write(sd, html, strlen(html));
+//                        free(html);
+//                    }
+
                     free(path);
                 }
             }
         }
     }
 
+    free(page_template);
     return 0;
 }

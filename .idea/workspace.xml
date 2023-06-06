@@ -16,9 +16,10 @@
     <configurations />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3fb123ca-41bb-409a-91f7-05318c38b5e4" name="Changes" comment="Added sendfile_p function&#10;Renamed cmtor to cmtorp&#10;Fixed bug in basename that returned an empty string if no / is found&#10;Renamed basename to sbasename (alfregay)">
+    <list default="true" id="3fb123ca-41bb-409a-91f7-05318c38b5e4" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cdl-utils.c" beforeDir="false" afterPath="$PROJECT_DIR$/cdl-utils.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cdl-utils.h" beforeDir="false" afterPath="$PROJECT_DIR$/cdl-utils.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cdl-ws.c" beforeDir="false" afterPath="$PROJECT_DIR$/cdl-ws.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -30,6 +31,13 @@
     <option name="formatViaClangd" value="false" />
   </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="HTML File" />
+      </list>
+    </option>
+  </component>
   <component name="FormatOnSaveOptions">
     <option name="myRunOnSave" value="true" />
   </component>
@@ -45,6 +53,7 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
@@ -94,7 +103,9 @@
       <workItem from="1685928968743" duration="4791000" />
       <workItem from="1685934218515" duration="3223000" />
       <workItem from="1685937502663" duration="7872000" />
-      <workItem from="1686012275663" duration="7081000" />
+      <workItem from="1686012275663" duration="8107000" />
+      <workItem from="1686032223465" duration="6836000" />
+      <workItem from="1686040138434" duration="3126000" />
     </task>
     <task id="LOCAL-00001" summary="Added CLion Configuration">
       <created>1685585011522</created>
@@ -124,7 +135,14 @@
       <option name="project" value="LOCAL" />
       <updated>1685951183684</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Only God and me knew what I was doing here last night.&#10;Now only God knows.">
+      <created>1686024748149</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1686024748149</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -152,6 +170,18 @@
     <MESSAGE value="Added gitignore" />
     <MESSAGE value="Added tests&#10;Style changes&#10;Renamed get_file_name to basename&#10;Fixed bug in basename that threw a segfault error when the path ended in /" />
     <MESSAGE value="Added sendfile_p function&#10;Renamed cmtor to cmtorp&#10;Fixed bug in basename that returned an empty string if no / is found&#10;Renamed basename to sbasename (alfregay)" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added sendfile_p function&#10;Renamed cmtor to cmtorp&#10;Fixed bug in basename that returned an empty string if no / is found&#10;Renamed basename to sbasename (alfregay)" />
+    <MESSAGE value="Only God and me knew what I was doing here last night.&#10;Now only God knows." />
+    <option name="LAST_COMMIT_MESSAGE" value="Only God and me knew what I was doing here last night.&#10;Now only God knows." />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/cdl-utils.c</url>
+          <line>215</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
