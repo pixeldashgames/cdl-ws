@@ -1,3 +1,5 @@
+#define _XOPEN_SOURCE 700
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -16,6 +18,12 @@
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
 
+enum OrderBy {
+    Name,
+    Size,
+    Date
+};
+
 #define DIR_LINK_TEMPLATE "<p>&#x1F4C1 <a href=\"%s\">%s/</a></p>"
 #define FILE_LINK_TEMPLATE "<p>&#x1F4C4 <a href=\"%s\">%s</a></p>"
 
@@ -25,6 +33,15 @@
 
 #define HTML_404_BODY "<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested URL was not found on this server.</p></body></html>"
 #define HTML_TR_TEMPLATE "<tr class=\"rows\">\n<td class=\"text\">\n%s\n</td>\n<td class=\"number\">\n%zu\n</td>\n<td class=\"text\">\n%s\n</td>\n</tr>\n"
+
+typedef struct TableRow TableRow;
+struct TableRow {
+    char *row_string;
+    char *item_name;
+    size_t item_size;
+    char *modification_date;
+    bool isDir;
+};
 
 // returns a <a> html link for a given path.
 char *ptoa(char *p, bool isdir) {
@@ -127,7 +144,77 @@ int count_entries(char *path) {
     return count;
 }
 
-char *create_tr(char *path) {
+int compare_name(const void *a, const void *b) {
+    TableRow *ta = (TableRow *) a;
+    TableRow *tb = (TableRow *) b;
+
+    if (ta->isDir != tb->isDir) {
+        return ta->isDir ? -1 : 1;
+    }
+
+    return strcmp(ta->item_name, tb->item_name);;
+}
+
+int compare_name_a(const void *a, const void *b) {
+    return compare_name(a, b) * -1;
+}
+
+
+int compare_size(const void *a, const void *b) {
+    TableRow *ta = (TableRow *) a;
+    TableRow *tb = (TableRow *) b;
+
+    if (ta->isDir != tb->isDir) {
+        return ta->isDir ? 1 : -1;
+    }
+
+    long long dif = (long long) ta->item_size - (long long) tb->item_size;
+    return dif > 0 ? 1 : (dif == 0 ? 0 : -1);
+}
+
+int compare_size_a(const void *a, const void *b) {
+    return compare_size(a, b) * -1;
+}
+
+int compare_date(const void *a, const void *b) {
+    TableRow *ta = (TableRow *) a;
+    TableRow *tb = (TableRow *) b;
+
+    if (ta->isDir != tb->isDir) {
+        return ta->isDir ? 1 : -1;
+    }
+
+    struct tm tm1;
+    struct tm tm2;
+    strptime(ta->modification_date, "%a %b %d %H:%M:%S %Y", &tm1);
+    strptime(tb->modification_date, "%a %b %d %H:%M:%S %Y", &tm2);
+    time_t t1 = mktime(&tm1);
+    time_t t2 = mktime(&tm2);
+
+    double dif = difftime(t1, t2);
+
+    return dif > 0 ? 1 : (dif == 0 ? 0 : -1);
+}
+
+int compare_date_a(const void *a, const void *b) {
+    return compare_date(a, b) * -1;
+}
+
+void sort_entries(TableRow *entries, int count, enum OrderBy order_by, bool ascending) {
+    switch (order_by) {
+        case Name:
+            qsort(entries, count, sizeof(TableRow), ascending ? compare_name_a : compare_name);
+            break;
+        case Size:
+            qsort(entries, count, sizeof(TableRow), ascending ? compare_size_a : compare_size);
+            break;
+        case Date:
+            qsort(entries, count, sizeof(TableRow), ascending ? compare_date_a : compare_date);
+            break;
+    }
+}
+
+char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDir) {
     struct stat file_stat;
     if (stat(path, &file_stat) != 0) {
         perror("Error getting stats");
@@ -136,10 +223,12 @@ char *create_tr(char *path) {
 
     size_t length = strlen(HTML_TR_TEMPLATE);
 
-    char *name = ptoa(path, S_ISDIR(file_stat.st_mode));
+    *isDir = S_ISDIR(file_stat.st_mode);
+
+    char *name = ptoa(path, *isDir);
     length += strlen(name);
 
-    size_t size = S_ISDIR(file_stat.st_mode) ? 0 : file_stat.st_size;
+    *itemSize = *isDir ? 0 : file_stat.st_size;
     length += 20; // 20 is the max length of a size_t (18446744073709551615)
 
     char *date = ctime(&file_stat.st_mtime);
@@ -149,31 +238,52 @@ char *create_tr(char *path) {
 
     char *row = calloc(length + 1, sizeof(char));
 
-    sprintf(row, HTML_TR_TEMPLATE, name, size, date);
+    sprintf(row, HTML_TR_TEMPLATE, name, *itemSize, date);
+
+    strcpy(modificationDate, date);
 
     return row;
 }
 
 // TODO: Allow to create a table with multiples properties
-char *build_page(char *path, char *page_template) {
-    // TODO: make a page for wrong paths    
-    // TODO: remove / from the end of path if it exists
+char *build_page(char *path, char *page_template, enum OrderBy order_by, bool sort_asc) {
+    bool endsInSlash = path[strlen(path) - 1] == '/';
 
-    printf("page template : %s", page_template);
+    char *pcpy = NULL;
+    if (strcmp(path, "/") == 0) {
+        pcpy = calloc(2, sizeof(char));
+        strcpy(pcpy, ".");
+    } else {
+        pcpy = calloc(strlen(path) + (endsInSlash ? 0 : 1), sizeof(char));
+        strncpy(pcpy, path, strlen(path) - (endsInSlash ? 1 : 0));
+    }
+
+    if (pcpy == NULL)
+        exit(1);
+
+    DIR *dir = opendir(pcpy);
+
+    if (dir == NULL) {
+        char *ret = calloc(strlen(HTML_404_BODY) + strlen(HTTP_404_HEADER) + 1, sizeof(char));
+        sprintf(ret, "%s%s", HTTP_404_HEADER, HTML_404_BODY);
+
+        free(pcpy);
+
+        return ret;
+    }
 
     struct dirent *dir_entry;
     int i;
-    int entries_count = count_entries(path);
+    int entries_count = count_entries(pcpy);
 
     size_t page_len = strlen(page_template);
     size_t table_len = 0;
 
-    char **entries = malloc(entries_count * sizeof(char *));
-    for (i = 0; i < entries_count; ++i)
-        entries[i] = NULL;
+    TableRow *entries = malloc(entries_count * sizeof(TableRow));
+//    for (i = 0; i < entries_count; ++i)
+//        entries[i] = NULL;
 
     i = 0;
-    DIR *dir = opendir(path);
 
     if (dir != NULL) {
         while ((dir_entry = readdir(dir)) != NULL) {
@@ -182,18 +292,37 @@ char *build_page(char *path, char *page_template) {
             }
 
             // full path = path/dir
-            size_t fp_len = strlen(path) + strlen(dir_entry->d_name) + 2;
+            size_t namelen = strlen(dir_entry->d_name);
+
+            size_t fp_len = strlen(pcpy) + namelen + 2;
             char full_path[fp_len];
-            sprintf(full_path, "%s/%s", path, dir_entry->d_name);
+            sprintf(full_path, "%s/%s", pcpy, dir_entry->d_name);
 
-            entries[i] = create_tr(full_path);
+            size_t item_size = 0;
+            // Dates only go up to 24 characters before the year 10000, so I guess this is future proofing
+            char *item_date = calloc(30, sizeof(char));
+            bool isDir = false;
 
-            size_t row_len = strlen(entries[i]);
+            char *row_string = create_tr(full_path, &item_size, item_date, &isDir);
+
+            char *item_name = calloc(namelen + 1, sizeof(char));
+            strcpy(item_name, dir_entry->d_name);
+
+            TableRow row = {row_string, item_name, item_size, item_date, isDir};
+            entries[i] = row;
+
+            size_t row_len = strlen(row_string);
             table_len += row_len;
 
             i++;
         }
     }
+
+    free(pcpy);
+
+    entries_count = i;
+
+    sort_entries(entries, entries_count, order_by, sort_asc);
 
     page_len += table_len;
 
@@ -203,12 +332,14 @@ char *build_page(char *path, char *page_template) {
     char *en = NULL;
 
     for (i = 0; i < entries_count; i++) {
-        en = entries[i];
+        en = entries[i].row_string;
         if (en == NULL)
             continue;
 
         strcat(tableRows, en);
         free(en);
+        free(entries[i].modification_date);
+        free(entries[i].item_name);
     }
 
     free(entries);
@@ -218,11 +349,14 @@ char *build_page(char *path, char *page_template) {
 
     sprintf(page, page_template, tableRows);
 
-    //printf("template: %s\nrows: %s\npage: %s", page_template, tableRows, page);
-
     free(tableRows);
 
-    return page;
+    char *ret = calloc(strlen(page) + strlen(HTTP_HTML_HEADER) + 1, sizeof(char));
+    sprintf(ret, "%s%s", HTTP_HTML_HEADER, page);
+
+    free(page);
+
+    return ret;
 }
 
 // To run the server : gcc server.c -o server
@@ -255,8 +389,6 @@ int main(int argc, char *argv[]) {
     }
     char *page_template = readtoend(templatef);
     fclose(templatef);
-
-    printf("page template : %s\n", page_template);
 
     if (chdir(root) != 0) {
         perror("Couldn't create server on the specified path.\n");
@@ -389,14 +521,10 @@ int main(int argc, char *argv[]) {
 //                    if (sum)
 //                        strcat(full_path, path);
 
-                    char *page = build_page(path, page_template);
+                    char *page = build_page(path, page_template, Name, false);
 
 //                    free(full_path);
 
-                    printf("Page: %s\n", page);
-                    fflush(stdout);
-
-                    write(sd, HTTP_HTML_HEADER, strlen(HTTP_HTML_HEADER));
                     write(sd, page, strlen(page));
 
 //                    if (strcmp(path, "/coco.jpeg") == 0) {
