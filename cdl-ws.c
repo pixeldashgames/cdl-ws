@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <sys/select.h>
 #include <sys/stat.h>
+#include <sys/sendfile.h>
 #include <libgen.h>
 #include <time.h>
 #include "cdl-utils.h"
@@ -20,32 +21,6 @@
 
 #define HTTP_HTML_HEADER "HTTP/1.1 200 OK\nContent-Type: text/plain\nConnection: close\n\n"
 #define HTTP_FILE_HEADER "HTTP/1.1 200 OK\nContent-Type: application/octet-stream\nContent-Disposition: attachment; filename=\"%s\"\nContent-Length: %zu\n\n"
-
-// returns the directory or file name indicated by a path, i.e. "myitem" in /home/user/myitem
-char *sbasename(char *p) {
-    int n = (intstrlen(p);
-
-    char *pcpy = malloc((n + 1) * sizeof(char));
-    strcpy(pcpy, p);
-
-    char *name = malloc((n + 1) * sizeof(char));
-    name[0] = '\0';
-
-    if (pcpy[n - 1] == '/') {
-        pcpy[--n] = '\0';
-    }
-    for (int i = (int) n - 1; i >= 0; i--) {
-        if (pcpy[i] != '/')
-            continue;
-
-        strcpy(name, pcpy + i + 1);
-        break;
-    }
-
-    free(pcpy);
-
-    return name;
-}
 
 // returns a <a> html link for a given path.
 char *ptoa(char *p, bool isdir) {
@@ -78,7 +53,7 @@ char *cmtorp(char *message) {
     return joinarr(req, ' ', req.count - 1);
 }
 
-// sends a file     to a client socket
+// sends a file to a client socket
 size_t sendfile_p(char *p, int clientfd) {
     int fd = open(p, O_RDONLY);
 
@@ -86,7 +61,7 @@ size_t sendfile_p(char *p, int clientfd) {
     struct stat st;
     fstat(fd, &st);
 
-    char *fname = sbasename(p);
+    char *fname = basename(p);
 
     // http header for the file
     char *header = malloc((strlen(HTTP_FILE_HEADER) + strlen(fname) + 24) * sizeof(char));
@@ -135,13 +110,11 @@ int run_tests(__attribute__((unused)) int argc, __attribute__((unused)) char *ar
     return allCorrect ? 0 : 1;
 }
 
-int count_entries(char *path)
-{
+int count_entries(char *path) {
     DIR *dir;
-    struct dirent *dir_entry;
     int count = 0;
     if ((dir = opendir(path)) != NULL) {
-        while ((dir_entry = readdir(dir)) != NULL) count++;
+        while (readdir(dir) != NULL) count++;
         closedir(dir);
     } else {
         perror("Unable to open directory");
@@ -151,31 +124,28 @@ int count_entries(char *path)
 }
 
 char *create_tr(char *path) {
-    DIR *dir;
-    struct dirent *dir_entry;
     struct stat file_stat;
     if (stat(path, &file_stat) != 0) {
         perror("Error getting stats");
         return NULL;
     }
 
-    size_t length = 0;
+    size_t length = 2048;
 
     char *name = ptoa(path, S_ISDIR(file_stat.st_mode));
-    length += strlen(name) + 9;
+//    length += strlen(name) + 9;
     printf("NAME: %s\n", name);
 
     size_t size = S_ISDIR(file_stat.st_mode) ? 0 : file_stat.st_size;
     char c_size[24];
     sprintf(c_size, "%zu", size);
-    length += strlen(c_size);
+//    length += strlen(c_size);
     printf("SIZE: %ld\n", size);
 
     char *date = ctime(&file_stat.st_mtime);
     date[strlen(date) - 1] = '\0';
-    length += strlen(date) + 9;
+//    length += strlen(date) + 9;
     printf("DATE: %s\n", date);
-
 
     char *row = malloc((length + 1) * sizeof(char));
 
@@ -186,23 +156,25 @@ char *create_tr(char *path) {
 
 // TODO: Allow to create a table with multiples properties
 char *build_page(char *path) {
-    DIR *dir;
     struct dirent *dir_entry;
     int entries_count = count_entries(path);
-    int i = 0;
+    int i;
     // TODO: make a page for wrong paths
 
     size_t page_len = strlen(HTTP_HTML_HEADER);
     size_t table_len = 0;
-    char *entries[entries_count];
+    char **entries = malloc(entries_count * sizeof(char *));
+    for (i = 0; i < entries_count; ++i) {
+        entries[i] = NULL;
+    }
 
-    if ((dir = opendir(path)) != NULL)
-    {
+    i = 0;
+    DIR *dir = opendir(path);
+
+    if (dir != NULL) {
         printf("open dir OK\n");
-        while ((dir_entry = readdir(dir)) != NULL)
-        {
-            if (strcmp(dir_entry->d_name, ".") == 0 || strcmp(dir_entry->d_name, "..") == 0)
-            {
+        while ((dir_entry = readdir(dir)) != NULL) {
+            if (strcmp(dir_entry->d_name, ".") == 0 || strcmp(dir_entry->d_name, "..") == 0) {
                 continue; // skip current and parent directories
             }
             printf("read dir OK\n");
@@ -210,10 +182,12 @@ char *build_page(char *path) {
             printf("fp_len: %ld\n", fp_len);
             char full_path[fp_len];
             sprintf(full_path, "%s/%s", path, dir_entry->d_name);
-            char *row = create_tr(full_path);
-            size_t row_len = strlen(row);
+            entries[i] = create_tr(full_path);
+            printf("Entry %d :%s\n", i, entries[i]);
+            size_t row_len = strlen(entries[i]);
             table_len += row_len;
-            entries[i++] = row;
+
+            i++;
         }
     }
 
@@ -221,21 +195,32 @@ char *build_page(char *path) {
     printf("table_len: %ld\n", table_len);
     printf("f_row %s\n", entries[0]);
     //Create table
-    char *table = malloc((table_len + 1) * sizeof(char));
-    memset(table, 0, (table_len + 1) * sizeof(char));
-    for (int j = 0; j < entries_count; j++) {
-        printf("entry size: %ld\n", strlen(entries[j]));
-        strcat(table, entries[j]);
+    char *table = calloc(table_len + 1, sizeof(char));
+
+    char *en = NULL;
+
+    for (i = 0; i < entries_count; i++) {
+        en = entries[i];
+        if (en == NULL) {
+            printf("Entry %d is NULL\n", i);
+            continue;
+        }
+
+        printf("entry size: %ld\n", strlen(en));
+        strcat(table, en);
+        free(en);
     }
 
+    free(entries);
+
     // Create html
-    char *html = malloc((table_len + 1) * sizeof(char));
+    char *html = calloc(table_len + 1, sizeof(char));
 
     strcpy(html, table);
     free(table);
 
     //Create page
-    char *page = malloc((page_len + 1) * sizeof(char));
+    char *page = calloc(page_len + 1, sizeof(char));
     sprintf(page, "%s%s", HTTP_HTML_HEADER, html);
     free(html);
 
@@ -277,10 +262,11 @@ int main(int argc, char *argv[]) {
     int max_sd, i, sd;
 
     // buffer : Input buffer.
-    char buffer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE] = "";
+
     // set of file descriptors for client read 'streams'
     fd_set readfds;
-    int clients[MAX_CLIENTS];
+    int clients[MAX_CLIENTS] = {};
     for (i = 0; i < MAX_CLIENTS; i++)
         clients[i] = 0;
 
