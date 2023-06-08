@@ -259,9 +259,8 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
         pcpy = calloc(strlen(path) + (endsInSlash ? 0 : 1), sizeof(char));
         strncpy(pcpy, path, strlen(path) - (endsInSlash ? 1 : 0));
     }
-
     if (pcpy == NULL)
-        exit(1);
+        return NULL;
 
     DIR *dir = opendir(pcpy);
 
