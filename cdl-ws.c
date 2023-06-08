@@ -14,6 +14,7 @@
 #include <libgen.h>
 #include <time.h>
 #include "cdl-utils.h"
+#include <errno.h>
 
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
@@ -124,7 +125,7 @@ int run_tests(__attribute__((unused)) int argc, __attribute__((unused)) char *ar
     printf("cmtorp Test 1: %s\n", cmtor_test1 ? "✅" : "❌");
 
     int correctCount = ptoa_test0 + ptoa_test1 + /*name_test0 + name_test1 +*/ cmtor_test0 + cmtor_test1;
-    int total = 6;
+    int total = 4;
     bool allCorrect = correctCount == total;
     printf("Testing Finished. Results %d/%d %s", correctCount, total, allCorrect ? "✅" : "❌");
 
@@ -226,6 +227,7 @@ char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDi
     *isDir = S_ISDIR(file_stat.st_mode);
 
     char *name = ptoa(path, *isDir);
+    printf("name ptoa: %s\n", name);
     length += strlen(name);
 
     *itemSize = *isDir ? 0 : file_stat.st_size;
@@ -287,16 +289,16 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
 
     if (dir != NULL) {
         while ((dir_entry = readdir(dir)) != NULL) {
-            if (strcmp(dir_entry->d_name, ".") == 0 /*|| strcmp(dir_entry->d_name, "..") == 0*/) {
+            if (strcmp(dir_entry->d_name, ".") == 0 /*|| strcmp(dir_entry->d_name, "..") == 0*/)
                 continue; // skip current directory
-            }
-
+            if (dir_entry->d_name[0] == '.' && strcmp(dir_entry->d_name, "..") != 0)
+                continue; // skip hidden files
             // full path = path/dir
             size_t namelen = strlen(dir_entry->d_name);
-
             size_t fp_len = strlen(pcpy) + namelen + 2;
             char full_path[fp_len];
             sprintf(full_path, "%s/%s", pcpy, dir_entry->d_name);
+            printf("full_path: %s\n", full_path);
 
             size_t item_size = 0;
             // Dates only go up to 24 characters before the year 10000, so I guess this is future proofing
@@ -355,6 +357,33 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
     sprintf(ret, "%s%s", HTTP_HTML_HEADER, page);
 
     free(page);
+
+    return ret;
+}
+
+// Remove entirely "%20" from path to create a path understandable for console introducing a backslash before the space
+char *clnp(char *path) {
+    char *pcpy = calloc(strlen(path) + 1, sizeof(char));
+    strcpy(pcpy, path);
+
+    char *pcpy2 = calloc(strlen(path) + 1, sizeof(char));
+    strcpy(pcpy2, path);
+
+    char *token = strtok(pcpy, "%20");
+    char *token2 = strtok(pcpy2, "%20");
+
+    char *ret = calloc(strlen(path) + 1, sizeof(char));
+
+    while (token != NULL) {
+        strcat(ret, token);
+        strcat(ret, "\\ ");
+        token = strtok(NULL, "%20");
+    }
+
+    ret[strlen(ret) - 2] = '\0';
+
+    free(pcpy);
+    free(pcpy2);
 
     return ret;
 }
@@ -512,37 +541,34 @@ int main(int argc, char *argv[]) {
                 } else {
                     // HANDLING INCOMING DATA
                     char *path = cmtorp(buffer);
+                    path = clnp(path);
+                    printf("PATH: %s\n", path);
+                    printf("BUFFER----------------------------------\n");
+                    printf("%s\n", buffer);
 
-//                    bool sum = true;
-//                    if (strcmp(path, "/") == 0)
-//                        sum = false;
-//                    char *full_path = malloc((strlen(root) + ((sum) ? strlen(path) : 0) + 1) * sizeof(char));
-//                    strcpy(full_path, root);
-//                    if (sum)
-//                        strcat(full_path, path);
+                    // Handling path
+                    char full_path[strlen(path) + 1];
+                    sprintf(full_path, ".%s", path);
+                    printf("FULL PATH: %s\n", full_path);
 
-                    char *page = build_page(path, page_template, Name, false);
-
-//                    free(full_path);
-
-                    write(sd, page, strlen(page));
-
-//                    if (strcmp(path, "/coco.jpeg") == 0) {
-//                        size_t sent = sendfile_p("coco.jpeg", sd);
-//                        printf("Sent %zu bytes\n", sent);
-//                    } else {
-//                        write(sd, HTTP_HTML_HEADER, strlen(HTTP_HTML_HEADER));
-//                        char *html = ptoa("coco.jpeg", false);
-//                        write(sd, html, strlen(html));
-//                        free(html);
-//                    }
-
+                    struct stat file_stat;
+                    if (stat(full_path, &file_stat) != 0) {
+                        perror("Error getting stats");
+                        printf("errno = %d\n", errno);
+                    }
+                    printf("after stat method\n");
+                    if (S_ISDIR(file_stat.st_mode)) {
+                        printf("IS DIR\n");
+                        char *page = build_page(full_path, page_template, Name, false);
+                        write(sd, page, strlen(page));
+                    } else {
+                        printf("IS FILE\n");
+                        size_t sent = sendfile_p(path, sd);
+                        printf("Sent %zu bytes\n", sent);
+                    }
                     free(path);
                 }
             }
         }
     }
-
-    free(page_template);
-    return 0;
 }
