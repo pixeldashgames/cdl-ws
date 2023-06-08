@@ -16,7 +16,7 @@
 #include "cdl-utils.h"
 #include <errno.h>
 
-#define MAX_CLIENTS 10
+#define MAX_CLIENTS 1024
 #define BUFFER_SIZE 1024
 
 enum OrderBy {
@@ -25,7 +25,7 @@ enum OrderBy {
     Date
 };
 
-#define DIR_LINK_TEMPLATE "<p>&#x1F4C1 <a href=\"%s\">%s/</a></p>"
+#define DIR_LINK_TEMPLATE "<p>&#x1F4C1 <a href=\"%s/.\">%s/</a></p>"
 #define FILE_LINK_TEMPLATE "<p>&#x1F4C4 <a href=\"%s\">%s</a></p>"
 
 #define HTTP_HTML_HEADER "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: close\n\n"
@@ -55,9 +55,9 @@ char *ptoa(char *p, bool isdir) {
     size_t namelen = strlen(itemname);
     size_t plen = strlen(p);
 
-    char *link = malloc((templen + plen + namelen + 1) * sizeof(char));
+    char *link = malloc((templen + namelen * 2 + 1) * sizeof(char));
 
-    sprintf(link, template, p, itemname);
+    sprintf(link, template, itemname, itemname);
 
     //free(itemname);
     return link;
@@ -70,9 +70,26 @@ char *cmtorp(char *message) {
         end = (int) strlen(message);
 
     struct JaggedCharArray req = splitnstr(message, ' ', end, true);
-    req.arr += 1;
-    req.count -= 1;
-    return joinarr(req, ' ', req.count - 1);
+    req.arr++;
+    req.count--;
+    bool delslash = false;
+    if (req.arr[0][0] == '/') {
+        req.arr[0]++;
+        delslash = true;
+    }
+
+    char *ret = joinarr(req, ' ', req.count - 1);
+
+    if (delslash)
+        req.arr[0]--;
+    req.arr--;
+    req.count++;
+
+    for (int i = 0; i < req.count; ++i)
+        free(req.arr[i]);
+    free(req.arr);
+
+    return ret;
 }
 
 // sends a file to a client socket
@@ -138,11 +155,11 @@ int count_entries(char *path) {
     if ((dir = opendir(path)) != NULL) {
         while (readdir(dir) != NULL) count++;
         closedir(dir);
-    } else {
-        perror("Unable to open directory");
-        return -1;
+        return count;
     }
-    return count;
+
+    perror("Unable to open directory");
+    return -1;
 }
 
 int compare_name(const void *a, const void *b) {
@@ -153,13 +170,12 @@ int compare_name(const void *a, const void *b) {
         return ta->isDir ? -1 : 1;
     }
 
-    return strcmp(ta->item_name, tb->item_name);;
+    return strcmp(ta->item_name, tb->item_name);
 }
 
 int compare_name_a(const void *a, const void *b) {
     return compare_name(a, b) * -1;
 }
-
 
 int compare_size(const void *a, const void *b) {
     TableRow *ta = (TableRow *) a;
@@ -249,16 +265,20 @@ char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDi
 
 // TODO: Allow to create a table with multiples properties
 char *build_page(char *path, char *page_template, enum OrderBy order_by, bool sort_asc) {
-    bool endsInSlash = path[strlen(path) - 1] == '/';
+    bool isCwdRoot = false;
 
     char *pcpy = NULL;
-    if (strcmp(path, "/") == 0) {
+    if (strlen(path) == 0) {
         pcpy = calloc(2, sizeof(char));
         strcpy(pcpy, ".");
+        isCwdRoot = true;
     } else {
+        bool endsInSlash = path[strlen(path) - 1] == '/';
+
         pcpy = calloc(strlen(path) + (endsInSlash ? 0 : 1), sizeof(char));
         strncpy(pcpy, path, strlen(path) - (endsInSlash ? 1 : 0));
     }
+    // Will never happen, but some linters show a warning if you don't do this.
     if (pcpy == NULL)
         return NULL;
 
@@ -266,7 +286,7 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
 
     if (dir == NULL) {
         char *ret = calloc(strlen(HTML_404_BODY) + strlen(HTTP_404_HEADER) + 1, sizeof(char));
-        sprintf(ret, "%s%s", HTTP_404_HEADER, HTML_404_BODY);
+        strcpy(ret, HTTP_404_HEADER HTML_404_BODY);
 
         free(pcpy);
 
@@ -286,38 +306,45 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
 
     i = 0;
 
-    if (dir != NULL) {
-        while ((dir_entry = readdir(dir)) != NULL) {
-            if (strcmp(dir_entry->d_name, ".") == 0 /*|| strcmp(dir_entry->d_name, "..") == 0*/)
-                continue; // skip current directory
-            if (dir_entry->d_name[0] == '.' && strcmp(dir_entry->d_name, "..") != 0)
-                continue; // skip hidden files
-            // full path = path/dir
-            size_t namelen = strlen(dir_entry->d_name);
-            size_t fp_len = strlen(pcpy) + namelen + 2;
-            char full_path[fp_len];
+    while ((dir_entry = readdir(dir)) != NULL) {
+        if (strcmp(dir_entry->d_name, ".") == 0)
+            continue; // skip current directory
+//            if (dir_entry->d_name[0] == '.' && strcmp(dir_entry->d_name, "..") != 0)
+//                continue; // skip hidden files
+        // full path = path/dir
+        size_t namelen = strlen(dir_entry->d_name);
+        size_t fp_len = isCwdRoot
+                        ? (namelen + 1)
+                        : (strlen(pcpy) + namelen + 2);
+        char full_path[fp_len];
+
+        if (isCwdRoot)
+            strcpy(full_path, dir_entry->d_name);
+        else
             sprintf(full_path, "%s/%s", pcpy, dir_entry->d_name);
-            printf("full_path: %s\n", full_path);
 
-            size_t item_size = 0;
-            // Dates only go up to 24 characters before the year 10000, so I guess this is future proofing
-            char *item_date = calloc(30, sizeof(char));
-            bool isDir = false;
+        printf("full_path: %s\n", full_path);
 
-            char *row_string = create_tr(full_path, &item_size, item_date, &isDir);
+        size_t item_size = 0;
+        // Dates only go up to 24 characters before the year 10000, so I guess this is future proofing
+        char *item_date = calloc(30, sizeof(char));
+        bool isDir = false;
 
-            char *item_name = calloc(namelen + 1, sizeof(char));
-            strcpy(item_name, dir_entry->d_name);
+        char *row_string = create_tr(full_path, &item_size, item_date, &isDir);
 
-            TableRow row = {row_string, item_name, item_size, item_date, isDir};
-            entries[i] = row;
+        char *item_name = calloc(namelen + 1, sizeof(char));
+        strcpy(item_name, dir_entry->d_name);
 
-            size_t row_len = strlen(row_string);
-            table_len += row_len;
+        TableRow row = {row_string, item_name, item_size, item_date, isDir};
+        entries[i] = row;
 
-            i++;
-        }
+        size_t row_len = strlen(row_string);
+        table_len += row_len;
+
+        i++;
     }
+
+    closedir(dir);
 
     free(pcpy);
 
@@ -360,31 +387,47 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
     return ret;
 }
 
-// Remove entirely "%20" from path to create a path understandable for console introducing a backslash before the space
-char *clnp(char *path) {
-    char *pcpy = calloc(strlen(path) + 1, sizeof(char));
-    strcpy(pcpy, path);
+void handle_client(int sd, char *path, char *page_template) {
+    printf("PATH: %s\n", path);
 
-    char *pcpy2 = calloc(strlen(path) + 1, sizeof(char));
-    strcpy(pcpy2, path);
+    pid_t pid = fork();
 
-    char *token = strtok(pcpy, "%20");
-    char *token2 = strtok(pcpy2, "%20");
+    if (pid != 0)
+        return;
 
-    char *ret = calloc(strlen(path) + 1, sizeof(char));
-
-    while (token != NULL) {
-        strcat(ret, token);
-        strcat(ret, "\\ ");
-        token = strtok(NULL, "%20");
+    if (strcmp(path, "") == 0) {
+        char *page = build_page(path, page_template, Name, false);
+        printf("==================================\nPAGE PAGE PAGE\n==================================\n%s\n==================================\nPAGE PAGE PAGE\n==================================\n",
+               page);
+        write(sd, page, strlen(page));
+        free(page);
+        exit(0);
     }
 
-    ret[strlen(ret) - 2] = '\0';
+    struct stat file_stat;
+    if (stat(path, &file_stat) != 0) {
+        fprintf(stderr, "Error getting stats, for \"%s\" ", path);
+        printf("errno = %d\n", errno);
 
-    free(pcpy);
-    free(pcpy2);
+        char *page = build_page(path, page_template, Name, false);
+        write(sd, page, strlen(page));
+        free(page);
+        exit(0);
+    }
 
-    return ret;
+    if (S_ISDIR(file_stat.st_mode)) {
+        printf("IS DIR\n");
+        char *page = build_page(path, page_template, Name, false);
+        printf("==================================\nPAGE PAGE PAGE\n==================================\n%s\n==================================\nPAGE PAGE PAGE\n==================================\n",
+               page);
+        write(sd, page, strlen(page));
+    } else {
+        printf("IS FILE\n");
+        size_t sent = sendfile_p(path, sd);
+        printf("Sent %zu bytes\n", sent);
+    }
+
+    exit(0);
 }
 
 // To run the server : gcc server.c -o server
@@ -540,31 +583,9 @@ int main(int argc, char *argv[]) {
                 } else {
                     // HANDLING INCOMING DATA
                     char *path = cmtorp(buffer);
-                    path = clnp(path);
-                    printf("PATH: %s\n", path);
-                    printf("BUFFER----------------------------------\n");
-                    printf("%s\n", buffer);
 
-                    // Handling path
-                    char full_path[strlen(path) + 1];
-                    sprintf(full_path, ".%s", path);
-                    printf("FULL PATH: %s\n", full_path);
+                    handle_client(sd, path, page_template);
 
-                    struct stat file_stat;
-                    if (stat(full_path, &file_stat) != 0) {
-                        perror("Error getting stats");
-                        printf("errno = %d\n", errno);
-                    }
-                    printf("after stat method\n");
-                    if (S_ISDIR(file_stat.st_mode)) {
-                        printf("IS DIR\n");
-                        char *page = build_page(full_path, page_template, Name, false);
-                        write(sd, page, strlen(page));
-                    } else {
-                        printf("IS FILE\n");
-                        size_t sent = sendfile_p(path, sd);
-                        printf("Sent %zu bytes\n", sent);
-                    }
                     free(path);
                 }
             }
