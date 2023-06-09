@@ -34,7 +34,10 @@ enum OrderBy
 #define HTTP_404_HEADER "HTTP/1.1 404 Not Found\nContent-Type: text/html\nConnection: close\n\n"
 
 #define HTML_404_BODY "<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested URL was not found on this server.</p></body></html>"
-#define HTML_TR_TEMPLATE "<tr class=\"rows\">\n<td class=\"text\">\n%s\n</td>\n<td class=\"number\">\n%zu\n</td>\n<td class=\"text\">\n%s\n</td>\n</tr>\n"
+#define HTML_TR_TEMPLATE "<tr class=\"rows\">\n<td class=\"text\">\n%s\n</td>\n<td class=\"number\">\n%s\n</td>\n<td class=\"text\">\n%s\n</td>\n</tr>\n"
+
+#define DATA_UNITS { "B", "KB", "MB", "GB", "TB", "EB", "ZB", "YB" };
+#define UNITS_COUNT 8
 
 typedef struct TableRow TableRow;
 struct TableRow
@@ -56,7 +59,7 @@ char *ptoa(char *p, bool isdir)
     char *itemname = basename(p);
 
     size_t namelen = strlen(itemname);
-    size_t plen = strlen(p);
+//    size_t plen = strlen(p);
 
     char *link = malloc((templen + namelen * 2 + 1) * sizeof(char));
 
@@ -112,6 +115,28 @@ char *cmtorp(char *message)
     for (int i = 0; i < req.count; ++i)
         free(req.arr[i]);
     free(req.arr);
+
+    return ret;
+}
+
+char *stobytes(size_t size) {
+    char *units[] = DATA_UNITS;
+
+    int c = 0;
+    int rem;
+    while (size > 1000 && c < UNITS_COUNT - 1) {
+        size_t newSize = size / 1000;
+        rem = (int) (size - (newSize * 1000));
+        size = newSize;
+        c++;
+    }
+
+    char *ret = calloc(30, sizeof(char));
+
+    if (c == 0)
+        sprintf(ret, "%zu %s", size, units[c]);
+    else
+        sprintf(ret, "%zu.%d %s", size, rem / 100, units[c]);
 
     return ret;
 }
@@ -297,7 +322,9 @@ char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDi
 
     char *row = calloc(length + 1, sizeof(char));
 
-    sprintf(row, HTML_TR_TEMPLATE, name, *itemSize, date);
+    char *sizeStr = *isDir ? "-" : stobytes(*itemSize);
+
+    sprintf(row, HTML_TR_TEMPLATE, name, sizeStr, date);
 
     strcpy(modificationDate, date);
 
@@ -444,8 +471,6 @@ void handle_client(int sd, char *path, char *page_template)
     if (strcmp(path, "") == 0)
     {
         char *page = build_page(path, page_template, Name, false);
-        printf("==================================\nPAGE PAGE PAGE\n==================================\n%s\n==================================\nPAGE PAGE PAGE\n==================================\n",
-               page);
         write(sd, page, strlen(page));
         free(page);
         exit(0);
@@ -466,8 +491,6 @@ void handle_client(int sd, char *path, char *page_template)
     {
         printf("IS DIR\n");
         char *page = build_page(path, page_template, Name, false);
-        printf("==================================\nPAGE PAGE PAGE\n==================================\n%s\n==================================\nPAGE PAGE PAGE\n==================================\n",
-               page);
         write(sd, page, strlen(page));
     }
     else
