@@ -28,9 +28,9 @@ enum OrderBy {
 #define DIR_LINK_TEMPLATE "<p>&#x1F4C1 <a href=\"%s/.\">%s/</a></p>"
 #define FILE_LINK_TEMPLATE "<p>&#x1F4C4 <a href=\"%s\">%s</a></p>"
 
-#define HTTP_HTML_HEADER "HTTP/1.1 200 OK\nContent-Type: text/html\nConnection: close\n\n"
-#define HTTP_FILE_HEADER "HTTP/1.1 200 OK\nContent-Type: application/octet-stream\nContent-Disposition: attachment; filename=\"%s\"\nContent-Length: %zu\n\n"
-#define HTTP_404_HEADER "HTTP/1.1 404 Not Found\nContent-Type: text/html\nConnection: close\n\n"
+#define HTTP_HTML_HEADER "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: keep-alive\r\n\r\n"
+#define HTTP_FILE_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Disposition: attachment; filename=\"%s\"\nContent-Length: %zu\r\n\r\n"
+#define HTTP_404_HEADER "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n"
 
 #define HTML_404_BODY "<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested URL was not found on this server.</p></body></html>"
 #define HTML_TR_TEMPLATE "<tr class=\"rows\">\n<td class=\"text\">\n%s\n</td>\n<td class=\"number\">\n%s\n</td>\n<td class=\"text\">\n%s\n</td>\n</tr>\n"
@@ -312,7 +312,8 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
     DIR *dir = opendir(pcpy);
 
     if (dir == NULL) {
-        char *ret = calloc(strlen(HTML_404_BODY) + strlen(HTTP_404_HEADER) + 1, sizeof(char));
+        // extra 20 to account for the Content-Length
+        char *ret = calloc(strlen(HTML_404_BODY) + strlen(HTTP_404_HEADER) + 20, sizeof(char));
         strcpy(ret, HTTP_404_HEADER HTML_404_BODY);
 
         free(pcpy);
@@ -358,6 +359,9 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
         bool isDir = false;
 
         char *row_string = create_tr(full_path, &item_size, item_date, &isDir);
+
+        if (row_string == NULL)
+            continue;
 
         char *item_name = calloc(namelen + 1, sizeof(char));
         strcpy(item_name, dir_entry->d_name);
@@ -425,6 +429,7 @@ void handle_client(int sd, char *path, char *page_template) {
     if (strcmp(path, "") == 0) {
         char *page = build_page(path, page_template, Name, false);
         write(sd, page, strlen(page));
+        shutdown(sd, SHUT_WR);
         free(page);
         exit(0);
     }
@@ -436,6 +441,7 @@ void handle_client(int sd, char *path, char *page_template) {
 
         char *page = build_page(path, page_template, Name, false);
         write(sd, page, strlen(page));
+        shutdown(sd, SHUT_WR);
         free(page);
         exit(0);
     }
@@ -444,11 +450,15 @@ void handle_client(int sd, char *path, char *page_template) {
         printf("IS DIR\n");
         char *page = build_page(path, page_template, Name, false);
         write(sd, page, strlen(page));
+        shutdown(sd, SHUT_WR);
+        free(page);
     } else {
         printf("IS FILE\n");
         size_t sent = sendfile_p(path, sd);
+        shutdown(sd, SHUT_WR);
         printf("Sent %zu bytes\n", sent);
     }
+
 
     exit(0);
 }
