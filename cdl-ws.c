@@ -66,6 +66,25 @@ char *ptoa(char *p, bool isdir) {
     return link;
 }
 
+char *clearpath(char *path)
+{
+    size_t path_length = strlen(path);
+    char *result = calloc(path_length + 1, sizeof(char));
+    strcpy(result, path);
+    int index = 0;
+    while ((index = findstr(result, "%20")) != -1)
+    {
+        size_t length = strlen(result);
+        char *right = calloc(length - (index + 2), sizeof(char));
+        strcpy(right, result + index + 3);
+        result[index] = ' ';
+        result[index + 1] = '\0';
+        strcat(result, right);
+        free(right);
+    }
+    return result;
+}
+
 // returns a request path extracted from a given client message
 char *cmtorp(char *message) {
     int end = findc(message, '\n');
@@ -351,8 +370,6 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
         else
             sprintf(full_path, "%s/%s", pcpy, dir_entry->d_name);
 
-        printf("full_path: %s\n", full_path);
-
         size_t item_size = 0;
         // Dates only go up to 24 characters before the year 10000, so I guess this is future proofing
         char *item_date = calloc(30, sizeof(char));
@@ -418,8 +435,8 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
     return ret;
 }
 
-void handle_client(int sd, char *path, char *page_template) {
-    printf("PATH: %s\n", path);
+void handle_client(int sd, char *path, char *page_template)
+{
 
     pid_t pid = fork();
 
@@ -458,7 +475,6 @@ void handle_client(int sd, char *path, char *page_template) {
         shutdown(sd, SHUT_WR);
         printf("Sent %zu bytes\n", sent);
     }
-
 
     exit(0);
 }
@@ -616,7 +632,7 @@ int main(int argc, char *argv[]) {
                 } else {
                     // HANDLING INCOMING DATA
                     char *path = cmtorp(buffer);
-
+                    path = clearpath(path);
                     handle_client(sd, path, page_template);
 
                     free(path);
