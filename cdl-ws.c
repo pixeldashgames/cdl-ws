@@ -19,7 +19,8 @@
 #define MAX_CLIENTS 1024
 #define BUFFER_SIZE 1024
 
-enum OrderBy {
+enum OrderBy
+{
     Name,
     Size,
     Date
@@ -35,11 +36,12 @@ enum OrderBy {
 #define HTML_404_BODY "<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested URL was not found on this server.</p></body></html>"
 #define HTML_TR_TEMPLATE "<tr class=\"rows\">\n<td class=\"text\">\n%s\n</td>\n<td class=\"number\">\n%s\n</td>\n<td class=\"text\">\n%s\n</td>\n<td class=\"text\">\n%s\n</td>\n</tr>\n"
 
-#define DATA_UNITS { "B", "KB", "MB", "GB", "TB", "EB", "ZB", "YB" };
+#define DATA_UNITS {"B", "KB", "MB", "GB", "TB", "EB", "ZB", "YB"};
 #define UNITS_COUNT 8
 
 typedef struct TableRow TableRow;
-struct TableRow {
+struct TableRow
+{
     char *row_string;
     char *item_name;
     size_t item_size;
@@ -48,13 +50,15 @@ struct TableRow {
 };
 
 typedef struct Request Request;
-struct Request {
+struct Request
+{
     char *path;
     struct Dictionary options;
 };
 
 // returns a <a> html link for a given path.
-char *ptoa(char *p, bool isdir) {
+char *ptoa(char *p, bool isdir)
+{
     char *template = isdir ? DIR_LINK_TEMPLATE : FILE_LINK_TEMPLATE;
 
     size_t templen = strlen(template);
@@ -62,22 +66,25 @@ char *ptoa(char *p, bool isdir) {
     char *itemname = basename(p);
 
     size_t namelen = strlen(itemname);
-//    size_t plen = strlen(p);
+    //    size_t plen = strlen(p);
 
     char *link = malloc((templen + namelen * 2 + 1) * sizeof(char));
-
+    if (strcmp(itemname, "../") == 0 || strcmp(itemname, "..") == 0)
+        sprintf(link, template, itemname, "⤴");
     sprintf(link, template, itemname, itemname);
 
-    //free(itemname);
+    // free(itemname);
     return link;
 }
 
-char *clearpath(char *path) {
+char *clearpath(char *path)
+{
     size_t path_length = strlen(path);
     char *result = calloc(path_length + 1, sizeof(char));
     strcpy(result, path);
     int index;
-    while ((index = findstr(result, "%20")) != -1) {
+    while ((index = findstr(result, "%20")) != -1)
+    {
         size_t length = strlen(result);
         char *right = calloc(length - (index + 2), sizeof(char));
         strcpy(right, result + index + 3);
@@ -90,16 +97,18 @@ char *clearpath(char *path) {
 }
 
 // returns a request path extracted from a given client message
-Request cmtor(char *message) {
+Request cmtor(char *message)
+{
     int end = findc(message, '\n');
     if (end == -1)
-        end = (int) strlen(message);
+        end = (int)strlen(message);
 
     struct JaggedCharArray req = splitnstr(message, ' ', end, true);
     req.arr++;
     req.count--;
     bool delslash = false;
-    if (req.arr[0][0] == '/') {
+    if (req.arr[0][0] == '/')
+    {
         req.arr[0]++;
         delslash = true;
     }
@@ -131,7 +140,8 @@ Request cmtor(char *message) {
     options.pairs = malloc(opts.count * sizeof(struct KeyValuePair));
     options.count = opts.count;
 
-    for (int i = 0; i < opts.count; ++i) {
+    for (int i = 0; i < opts.count; ++i)
+    {
         struct JaggedCharArray pair = splitstr(opts.arr[i], '=', false);
         dset(&options, pair.arr[0], pair.arr[1]);
         free(pair.arr);
@@ -142,14 +152,16 @@ Request cmtor(char *message) {
     return ret;
 }
 
-char *stobytes(size_t size) {
+char *stobytes(size_t size)
+{
     char *units[] = DATA_UNITS;
 
     int c = 0;
     int rem;
-    while (size > 1000 && c < UNITS_COUNT - 1) {
+    while (size > 1000 && c < UNITS_COUNT - 1)
+    {
         size_t newSize = size / 1000;
-        rem = (int) (size - (newSize * 1000));
+        rem = (int)(size - (newSize * 1000));
         size = newSize;
         c++;
     }
@@ -165,7 +177,8 @@ char *stobytes(size_t size) {
 }
 
 // sends a file to a client socket
-size_t sendfile_p(char *p, int clientfd) {
+size_t sendfile_p(char *p, int clientfd)
+{
     int fd = open(p, O_RDONLY);
 
     // file info, size etc.
@@ -183,18 +196,21 @@ size_t sendfile_p(char *p, int clientfd) {
     // how much of the file has been sent
     off_t offset = 0;
 
-    size_t rc = sendfile(clientfd, fd, &offset, (size_t) st.st_size);
+    size_t rc = sendfile(clientfd, fd, &offset, (size_t)st.st_size);
 
     close(fd);
 
     return rc;
 }
 
-int count_entries(char *path) {
+int count_entries(char *path)
+{
     DIR *dir;
     int count = 0;
-    if ((dir = opendir(path)) != NULL) {
-        while (readdir(dir) != NULL) count++;
+    if ((dir = opendir(path)) != NULL)
+    {
+        while (readdir(dir) != NULL)
+            count++;
         closedir(dir);
         return count;
     }
@@ -203,42 +219,50 @@ int count_entries(char *path) {
     return -1;
 }
 
-int compare_name(const void *a, const void *b) {
-    TableRow *ta = (TableRow *) a;
-    TableRow *tb = (TableRow *) b;
+int compare_name(const void *a, const void *b)
+{
+    TableRow *ta = (TableRow *)a;
+    TableRow *tb = (TableRow *)b;
 
-    if (ta->isDir != tb->isDir) {
+    if (ta->isDir != tb->isDir)
+    {
         return ta->isDir ? -1 : 1;
     }
 
     return strcmp(ta->item_name, tb->item_name);
 }
 
-int compare_name_a(const void *a, const void *b) {
+int compare_name_a(const void *a, const void *b)
+{
     return compare_name(a, b) * -1;
 }
 
-int compare_size(const void *a, const void *b) {
-    TableRow *ta = (TableRow *) a;
-    TableRow *tb = (TableRow *) b;
+int compare_size(const void *a, const void *b)
+{
+    TableRow *ta = (TableRow *)a;
+    TableRow *tb = (TableRow *)b;
 
-    if (ta->isDir != tb->isDir) {
+    if (ta->isDir != tb->isDir)
+    {
         return ta->isDir ? 1 : -1;
     }
 
-    long long dif = (long long) ta->item_size - (long long) tb->item_size;
+    long long dif = (long long)ta->item_size - (long long)tb->item_size;
     return dif > 0 ? 1 : (dif == 0 ? 0 : -1);
 }
 
-int compare_size_a(const void *a, const void *b) {
+int compare_size_a(const void *a, const void *b)
+{
     return compare_size(a, b) * -1;
 }
 
-int compare_date(const void *a, const void *b) {
-    TableRow *ta = (TableRow *) a;
-    TableRow *tb = (TableRow *) b;
+int compare_date(const void *a, const void *b)
+{
+    TableRow *ta = (TableRow *)a;
+    TableRow *tb = (TableRow *)b;
 
-    if (ta->isDir != tb->isDir) {
+    if (ta->isDir != tb->isDir)
+    {
         return ta->isDir ? 1 : -1;
     }
 
@@ -254,27 +278,32 @@ int compare_date(const void *a, const void *b) {
     return dif > 0 ? 1 : (dif == 0 ? 0 : -1);
 }
 
-int compare_date_a(const void *a, const void *b) {
+int compare_date_a(const void *a, const void *b)
+{
     return compare_date(a, b) * -1;
 }
 
-void sort_entries(TableRow *entries, int count, enum OrderBy order_by, bool ascending) {
-    switch (order_by) {
-        case Name:
-            qsort(entries, count, sizeof(TableRow), ascending ? compare_name_a : compare_name);
-            break;
-        case Size:
-            qsort(entries, count, sizeof(TableRow), ascending ? compare_size_a : compare_size);
-            break;
-        case Date:
-            qsort(entries, count, sizeof(TableRow), ascending ? compare_date_a : compare_date);
-            break;
+void sort_entries(TableRow *entries, int count, enum OrderBy order_by, bool ascending)
+{
+    switch (order_by)
+    {
+    case Name:
+        qsort(entries, count, sizeof(TableRow), ascending ? compare_name_a : compare_name);
+        break;
+    case Size:
+        qsort(entries, count, sizeof(TableRow), ascending ? compare_size_a : compare_size);
+        break;
+    case Date:
+        qsort(entries, count, sizeof(TableRow), ascending ? compare_date_a : compare_date);
+        break;
     }
 }
 
-char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDir) {
+char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDir)
+{
     struct stat file_stat;
-    if (stat(path, &file_stat) != 0) {
+    if (stat(path, &file_stat) != 0)
+    {
         perror("Error getting stats");
         return NULL;
     }
@@ -295,14 +324,13 @@ char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDi
     date[date_len] = '\0';
     length += date_len;
 
-    //get file permissions
+    // get file permissions
     char *permissions = calloc(4, sizeof(char));
     strcat(permissions, (file_stat.st_mode & S_IRUSR) ? "r" : "");
     strcat(permissions, (file_stat.st_mode & S_IWUSR) ? "w" : "");
     strcat(permissions, (file_stat.st_mode & S_IXUSR) ? "x" : "");
 
     length += 3;
-
 
     char *row = calloc(length + 1, sizeof(char));
 
@@ -315,7 +343,8 @@ char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDi
     return row;
 }
 
-char *build_page(Request req, char *page_template) {
+char *build_page(Request req, char *page_template)
+{
     bool isCwdRoot = false;
 
     char *path = req.path;
@@ -325,7 +354,8 @@ char *build_page(Request req, char *page_template) {
 
     int idx = -1;
     char *order = dtryget(req.options, "orderby", &idx);
-    if (idx >= 0) {
+    if (idx >= 0)
+    {
         if (strcmp(order, "name") == 0 || strcmp(order, "Name") == 0)
             order_by = Name;
         else if (strcmp(order, "size") == 0 || strcmp(order, "Size") == 0)
@@ -335,17 +365,21 @@ char *build_page(Request req, char *page_template) {
     }
 
     char *asc = dtryget(req.options, "ascending", &idx);
-    if (idx >= 0) {
+    if (idx >= 0)
+    {
         if (strcmp(asc, "false") == 0 || strcmp(asc, "False") == 0)
             ascending = false;
     }
 
     char *pcpy = NULL;
-    if (strlen(path) == 0) {
+    if (strlen(path) == 0)
+    {
         pcpy = calloc(2, sizeof(char));
         strcpy(pcpy, ".");
         isCwdRoot = true;
-    } else {
+    }
+    else
+    {
         bool endsInSlash = path[strlen(path) - 1] == '/';
 
         pcpy = calloc(strlen(path) + (endsInSlash ? 0 : 1), sizeof(char));
@@ -357,7 +391,8 @@ char *build_page(Request req, char *page_template) {
 
     DIR *dir = opendir(pcpy);
 
-    if (dir == NULL) {
+    if (dir == NULL)
+    {
         // extra 20 to account for the Content-Length
         char *ret = calloc(strlen(HTML_404_BODY) + strlen(HTTP_404_HEADER) + 20, sizeof(char));
         strcpy(ret, HTTP_404_HEADER HTML_404_BODY);
@@ -375,21 +410,22 @@ char *build_page(Request req, char *page_template) {
     size_t table_len = 0;
 
     TableRow *entries = malloc(entries_count * sizeof(TableRow));
-//    for (i = 0; i < entries_count; ++i)
-//        entries[i] = NULL;
+    //    for (i = 0; i < entries_count; ++i)
+    //        entries[i] = NULL;
 
     i = 0;
 
-    while ((dir_entry = readdir(dir)) != NULL) {
+    while ((dir_entry = readdir(dir)) != NULL)
+    {
         if (strcmp(dir_entry->d_name, ".") == 0)
             continue; // skip current directory
-//            if (dir_entry->d_name[0] == '.' && strcmp(dir_entry->d_name, "..") != 0)
-//                continue; // skip hidden files
+                      //            if (dir_entry->d_name[0] == '.' && strcmp(dir_entry->d_name, "..") != 0)
+                      //                continue; // skip hidden files
         // full path = path/dir
         size_t namelen = strlen(dir_entry->d_name);
         size_t fp_len = isCwdRoot
-                        ? (namelen + 1)
-                        : (strlen(pcpy) + namelen + 2);
+                            ? (namelen + 1)
+                            : (strlen(pcpy) + namelen + 2);
         char full_path[fp_len];
 
         if (isCwdRoot)
@@ -429,12 +465,13 @@ char *build_page(Request req, char *page_template) {
 
     page_len += table_len;
 
-    //Create tableRows
+    // Create tableRows
     char *tableRows = calloc(table_len + 1, sizeof(char));
 
     char *en = NULL;
 
-    for (i = 0; i < entries_count; i++) {
+    for (i = 0; i < entries_count; i++)
+    {
         en = entries[i].row_string;
         if (en == NULL)
             continue;
@@ -450,7 +487,18 @@ char *build_page(Request req, char *page_template) {
     // Create html
     char *page = calloc(page_len + 1, sizeof(char));
 
-    sprintf(page, page_template, tableRows);
+    switch (order_by)
+    {
+    case Name:
+        sprintf(page, page_template, (ascending) ? "false" : "true", (ascending) ? "↓" : "↑", "true", "↑", "true", "↑", tableRows);
+        break;
+    case Size:
+        sprintf(page, page_template, "true", "↑", (ascending) ? "false" : "true", (ascending) ? "↓" : "↑", "true", "↑", tableRows);
+        break;
+    case Date:
+        sprintf(page, page_template, "true", "↑", "true", "↑", (ascending) ? "false" : "true", (ascending) ? "↓" : "↑", tableRows);
+        break;
+    }
 
     free(tableRows);
 
@@ -462,7 +510,8 @@ char *build_page(Request req, char *page_template) {
     return ret;
 }
 
-void handle_client(int sd, Request req, char *page_template) {
+void handle_client(int sd, Request req, char *page_template)
+{
 
     pid_t pid = fork();
 
@@ -471,7 +520,8 @@ void handle_client(int sd, Request req, char *page_template) {
 
     char *path = req.path;
 
-    if (strcmp(path, "") == 0) {
+    if (strcmp(path, "") == 0)
+    {
         char *page = build_page(req, page_template);
         write(sd, page, strlen(page));
         shutdown(sd, SHUT_WR);
@@ -480,7 +530,8 @@ void handle_client(int sd, Request req, char *page_template) {
     }
 
     struct stat file_stat;
-    if (stat(path, &file_stat) != 0) {
+    if (stat(path, &file_stat) != 0)
+    {
         fprintf(stderr, "Error getting stats, for \"%s\" ", path);
         printf("errno = %d\n", errno);
 
@@ -491,13 +542,16 @@ void handle_client(int sd, Request req, char *page_template) {
         exit(0);
     }
 
-    if (S_ISDIR(file_stat.st_mode)) {
+    if (S_ISDIR(file_stat.st_mode))
+    {
         printf("IS DIR\n");
         char *page = build_page(req, page_template);
         write(sd, page, strlen(page));
         shutdown(sd, SHUT_WR);
         free(page);
-    } else {
+    }
+    else
+    {
         printf("IS FILE\n");
         size_t sent = sendfile_p(path, sd);
         shutdown(sd, SHUT_WR);
@@ -509,32 +563,36 @@ void handle_client(int sd, Request req, char *page_template) {
 
 // To run the server : gcc server.c -o server
 //                     ./server 31431 /rootpath
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 #pragma region Server Initialization
-    if (argc < 3) {
+    if (argc < 3)
+    {
         printf("usage: %s <server_port> <root_directory>\n", argv[0]);
         exit(1);
     }
 
-    int port = (int) strtol(argv[1], NULL, 10);
+    int port = (int)strtol(argv[1], NULL, 10);
 
     char *root = argv[2];
 
-//    if (access(root, F_OK) == -1) {
-//        printf("%s is not a valid path.\n", root);
-//    }
+    //    if (access(root, F_OK) == -1) {
+    //        printf("%s is not a valid path.\n", root);
+    //    }
 
     // Read the page HTML template
     FILE *templatef = fopen("template.html", "r");
     struct stat templateStats = {};
-    if (fstat(fileno(templatef), &templateStats) != 0) {
+    if (fstat(fileno(templatef), &templateStats) != 0)
+    {
         perror("Failed to find template.html");
         exit(1);
     }
     char *page_template = readtoend(templatef);
     fclose(templatef);
 
-    if (chdir(root) != 0) {
+    if (chdir(root) != 0)
+    {
         perror("Couldn't create server on the specified path.\n");
         exit(1);
     }
@@ -558,7 +616,8 @@ int main(int argc, char *argv[]) {
 
     // create server socket
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd < 0) {
+    if (server_fd < 0)
+    {
         perror("Couldn't create server socket on the specified port.\n");
         exit(1);
     }
@@ -571,7 +630,8 @@ int main(int argc, char *argv[]) {
     server_addr.sin_port = htons(port);
 
     // bind socket to address
-    if (bind(server_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
         perror("Couldn't bind server address to socket.\n");
         exit(1);
     }
@@ -579,7 +639,8 @@ int main(int argc, char *argv[]) {
     printf("Server socket bound to port...\n");
 
     // listen for incoming connections
-    if (listen(server_fd, MAX_CLIENTS) < 0) {
+    if (listen(server_fd, MAX_CLIENTS) < 0)
+    {
         perror("Error trying to listen to incoming connections.\n");
         exit(1);
     }
@@ -588,7 +649,8 @@ int main(int argc, char *argv[]) {
 
 #pragma endregion
 
-    while (1) {
+    while (1)
+    {
 
 #pragma region File Descriptor Set Initialization
         // clear file descriptor set
@@ -599,23 +661,27 @@ int main(int argc, char *argv[]) {
         max_sd = server_fd;
 
         // add child sockets to set
-        for (i = 0; i < max_clients; i++) {
+        for (i = 0; i < max_clients; i++)
+        {
             sd = clients[i];
 
             // add valid socket to set
-            if (sd > 0) {
+            if (sd > 0)
+            {
                 FD_SET(sd, &readfds);
             }
 
             // update max socket descriptor
-            if (sd > max_sd) {
+            if (sd > max_sd)
+            {
                 max_sd = sd;
             }
         }
 #pragma endregion
 
         // wait for activity on sockets
-        if (select(max_sd + 1, &readfds, NULL, NULL, NULL) < 0) {
+        if (select(max_sd + 1, &readfds, NULL, NULL, NULL) < 0)
+        {
             perror("Error trying to wait for activity from clients.\n");
             exit(1);
         }
@@ -623,16 +689,20 @@ int main(int argc, char *argv[]) {
 #pragma region Connection Requests
         // handle incoming connection request
         // FD_ISSET checks whether there is a connection request on the server
-        if (FD_ISSET(server_fd, &readfds)) {
+        if (FD_ISSET(server_fd, &readfds))
+        {
             socklen_t client_len = sizeof(client_addr);
-            if ((client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_len)) < 0) {
+            if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len)) < 0)
+            {
                 perror("Error accepting connection request from client.\n");
                 exit(1);
             }
 
             // add new client to list of clients
-            for (i = 0; i < max_clients; i++) {
-                if (clients[i] == 0) {
+            for (i = 0; i < max_clients; i++)
+            {
+                if (clients[i] == 0)
+                {
                     clients[i] = client_fd;
                     printf("New connection from %s:%d, socket fd: %d\n", inet_ntoa(client_addr.sin_addr),
                            ntohs(client_addr.sin_port), client_fd);
@@ -643,17 +713,22 @@ int main(int argc, char *argv[]) {
 #pragma endregion
 
         // handle incoming data from client
-        for (i = 0; i < max_clients; i++) {
+        for (i = 0; i < max_clients; i++)
+        {
             sd = clients[i];
 
             // Check whether the client is sending data.
-            if (FD_ISSET(sd, &readfds)) {
-                if ((read(sd, buffer, BUFFER_SIZE)) == 0) {
+            if (FD_ISSET(sd, &readfds))
+            {
+                if ((read(sd, buffer, BUFFER_SIZE)) == 0)
+                {
                     // client disconnected
                     printf("Client disconnected, socket fd: %d\n", sd);
                     close(sd);
                     clients[i] = 0;
-                } else {
+                }
+                else
+                {
                     // HANDLING INCOMING DATA
                     Request req = cmtor(buffer);
 
