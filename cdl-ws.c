@@ -33,7 +33,7 @@ enum OrderBy {
 #define HTTP_404_HEADER "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n"
 
 #define HTML_404_BODY "<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested URL was not found on this server.</p></body></html>"
-#define HTML_TR_TEMPLATE "<tr class=\"rows\">\n<td class=\"text\">\n%s\n</td>\n<td class=\"number\">\n%s\n</td>\n<td class=\"text\">\n%s\n</td>\n</tr>\n"
+#define HTML_TR_TEMPLATE "<tr class=\"rows\">\n<td class=\"text\">\n%s\n</td>\n<td class=\"number\">\n%s\n</td>\n<td class=\"text\">\n%s\n</td>\n<td class=\"text\">\n%s\n</td>\n</tr>\n"
 
 #define DATA_UNITS { "B", "KB", "MB", "GB", "TB", "EB", "ZB", "YB" };
 #define UNITS_COUNT 8
@@ -66,14 +66,12 @@ char *ptoa(char *p, bool isdir) {
     return link;
 }
 
-char *clearpath(char *path)
-{
+char *clearpath(char *path) {
     size_t path_length = strlen(path);
     char *result = calloc(path_length + 1, sizeof(char));
     strcpy(result, path);
     int index = 0;
-    while ((index = findstr(result, "%20")) != -1)
-    {
+    while ((index = findstr(result, "%20")) != -1) {
         size_t length = strlen(result);
         char *right = calloc(length - (index + 2), sizeof(char));
         strcpy(right, result + index + 3);
@@ -298,18 +296,26 @@ char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDi
     date[date_len] = '\0';
     length += date_len;
 
+    //get file permissions
+    char *permissions = calloc(4, sizeof(char));
+    strcat(permissions, (file_stat.st_mode & S_IRUSR) ? "r" : "");
+    strcat(permissions, (file_stat.st_mode & S_IWUSR) ? "w" : "");
+    strcat(permissions, (file_stat.st_mode & S_IXUSR) ? "x" : "");
+
+    length += 3;
+
+
     char *row = calloc(length + 1, sizeof(char));
 
     char *sizeStr = *isDir ? "-" : stobytes(*itemSize);
 
-    sprintf(row, HTML_TR_TEMPLATE, name, sizeStr, date);
+    sprintf(row, HTML_TR_TEMPLATE, name, sizeStr, date, permissions);
 
     strcpy(modificationDate, date);
 
     return row;
 }
 
-// TODO: Allow to create a table with multiples properties
 char *build_page(char *path, char *page_template, enum OrderBy order_by, bool sort_asc) {
     bool isCwdRoot = false;
 
@@ -435,8 +441,7 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
     return ret;
 }
 
-void handle_client(int sd, char *path, char *page_template)
-{
+void handle_client(int sd, char *path, char *page_template) {
 
     pid_t pid = fork();
 
