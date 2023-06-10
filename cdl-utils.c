@@ -204,7 +204,7 @@ char *readtoend(FILE *f) {
 
 char *dtryget(struct Dictionary dict, char *var, int *outidx) {
     for (int i = 0; i < dict.count; i++)
-        if (dict.pairs[i].key == var) {
+        if (dict.pairs[i].hasValue && strcmp(dict.pairs[i].key, var) == 0) {
             *outidx = i;
             return dict.pairs[i].value;
         }
@@ -225,8 +225,8 @@ int dset(struct Dictionary *dict, char *var, char *value) {
     for (int i = 0; i < dict->count; i++) {
         if (!dict->pairs[i].hasValue) {
             dict->pairs[i].hasValue = true;
-            strcpy(dict->pairs[i].key, var);
-            strcpy(dict->pairs[i].value, value);
+            dict->pairs[i].key = var;
+            dict->pairs[i].value = value;
             return 0;
         }
     }

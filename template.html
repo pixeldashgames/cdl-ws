@@ -22,6 +22,12 @@
             border-radius: 15px;
         }
 
+        .headlink {
+            color: white;
+            text-decoration-style: dotted;
+            text-decoration-thickness: 1px;
+        }
+
         .first {
             background: darkgreen;
             color: white;
@@ -71,15 +77,15 @@
     <thead class="first">
     <tr>
         <th class="text">
-            <a href="?orderby=Name&ascending=%s">Name %s</a>
+            <a class="headlink" href="?orderby=Name&ascending=%s">Name</a> %s
         </th>
         <th class="number">
-            <a href="?orderby=Size&ascending=%s">Size %s</a>
+            <a class="headlink" href="?orderby=Size&ascending=%s">Size</a> %s
         </th>
         <th class="text">
-            <a href="?orderby=Date&ascending=%s">Date Modified %s</a>
+            <a class="headlink" href="?orderby=Date&ascending=%s">Date Modified</a> %s
         </th>
-        <th class="text">Permissions</th>
+        <th class="text"><p class="headlink">Permissions</p></th>
     </tr>
     </thead>
     <tbody>
