@@ -47,6 +47,12 @@ struct TableRow {
     bool isDir;
 };
 
+typedef struct Request Request;
+struct Request {
+    char *path;
+    struct Dictionary options;
+};
+
 // returns a <a> html link for a given path.
 char *ptoa(char *p, bool isdir) {
     char *template = isdir ? DIR_LINK_TEMPLATE : FILE_LINK_TEMPLATE;
@@ -70,7 +76,7 @@ char *clearpath(char *path) {
     size_t path_length = strlen(path);
     char *result = calloc(path_length + 1, sizeof(char));
     strcpy(result, path);
-    int index = 0;
+    int index;
     while ((index = findstr(result, "%20")) != -1) {
         size_t length = strlen(result);
         char *right = calloc(length - (index + 2), sizeof(char));
@@ -84,7 +90,7 @@ char *clearpath(char *path) {
 }
 
 // returns a request path extracted from a given client message
-char *cmtorp(char *message) {
+Request cmtor(char *message) {
     int end = findc(message, '\n');
     if (end == -1)
         end = (int) strlen(message);
@@ -98,7 +104,7 @@ char *cmtorp(char *message) {
         delslash = true;
     }
 
-    char *ret = joinarr(req, ' ', req.count - 1);
+    char *req_str = joinarr(req, ' ', req.count - 1);
 
     if (delslash)
         req.arr[0]--;
@@ -108,6 +114,30 @@ char *cmtorp(char *message) {
     for (int i = 0; i < req.count; ++i)
         free(req.arr[i]);
     free(req.arr);
+
+    char *fixed_spaces = clearpath(req_str);
+    free(req_str);
+
+    struct JaggedCharArray split_req = splitstr(fixed_spaces, '?', false);
+
+    char *path = split_req.arr[0];
+
+    struct JaggedCharArray opts = splitstr(split_req.arr[1], '&', false);
+
+    free(split_req.arr);
+
+    struct Dictionary options;
+
+    options.pairs = malloc(opts.count * sizeof(struct KeyValuePair));
+    options.count = opts.count;
+
+    for (int i = 0; i < opts.count; ++i) {
+        struct JaggedCharArray pair = splitstr(opts.arr[i], '=', false);
+        dset(&options, pair.arr[0], pair.arr[1]);
+        free(pair.arr);
+    }
+
+    Request ret = {path, options};
 
     return ret;
 }
@@ -158,37 +188,6 @@ size_t sendfile_p(char *p, int clientfd) {
     close(fd);
 
     return rc;
-}
-
-int run_tests(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[]) {
-    bool ptoa_test0 =
-            strcmp(ptoa("/home/user/mydir", true), "<p>&#x1F4C1 <a href=\"/home/user/mydir\">mydir/</a></p>") == 0;
-    printf("ptoa Dir Test: %s\n", ptoa_test0 ? "✅" : "❌");
-
-    bool ptoa_test1 =
-            strcmp(ptoa("/home/user/myfile", false), "<p>&#x1F4C4 <a href=\"/home/user/myfile\">myfile</a></p>") == 0;
-    printf("ptoa File Test: %s\n", ptoa_test1 ? "✅" : "❌");
-
-//    bool name_test0 = strcmp(sbasename("/home/user/mydir/"), "mydir") == 0;
-//    printf("basename Dir Test: %s\n", name_test0 ? "✅" : "❌");
-//
-//    bool name_test1 = strcmp(sbasename("/home/user/myfile"), "myfile") == 0;
-//    printf("basename File Test: %s\n", name_test1 ? "✅" : "❌");
-
-    bool cmtor_test0 = strcmp(cmtorp("GET /home/user/my dir HTTP/1.1\nRandom Browser Data\nConnection Request"),
-                              "/home/user/my dir") == 0;
-    printf("cmtorp Test 0: %s\n", cmtor_test0 ? "✅" : "❌");
-
-    bool cmtor_test1 = strcmp(cmtorp("GET /home/my user/my dir/my    spaced    dir HTTP/1.1"),
-                              "/home/my user/my dir/my    spaced    dir") == 0;
-    printf("cmtorp Test 1: %s\n", cmtor_test1 ? "✅" : "❌");
-
-    int correctCount = ptoa_test0 + ptoa_test1 + /*name_test0 + name_test1 +*/ cmtor_test0 + cmtor_test1;
-    int total = 4;
-    bool allCorrect = correctCount == total;
-    printf("Testing Finished. Results %d/%d %s", correctCount, total, allCorrect ? "✅" : "❌");
-
-    return allCorrect ? 0 : 1;
 }
 
 int count_entries(char *path) {
@@ -316,8 +315,30 @@ char *create_tr(char *path, size_t *itemSize, char *modificationDate, bool *isDi
     return row;
 }
 
-char *build_page(char *path, char *page_template, enum OrderBy order_by, bool sort_asc) {
+char *build_page(Request req, char *page_template) {
     bool isCwdRoot = false;
+
+    char *path = req.path;
+
+    enum OrderBy order_by = Name;
+    bool ascending = true;
+
+    int idx = -1;
+    char *order = dtryget(req.options, "orderby", &idx);
+    if (idx >= 0) {
+        if (strcmp(order, "name") == 0 || strcmp(order, "Name") == 0)
+            order_by = Name;
+        else if (strcmp(order, "size") == 0 || strcmp(order, "Size") == 0)
+            order_by = Size;
+        else if (strcmp(order, "date") == 0 || strcmp(order, "Date") == 0)
+            order_by = Date;
+    }
+
+    char *asc = dtryget(req.options, "ascending", &idx);
+    if (idx >= 0) {
+        if (strcmp(asc, "false") == 0 || strcmp(asc, "False") == 0)
+            ascending = false;
+    }
 
     char *pcpy = NULL;
     if (strlen(path) == 0) {
@@ -404,7 +425,7 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
 
     entries_count = i;
 
-    sort_entries(entries, entries_count, order_by, sort_asc);
+    sort_entries(entries, entries_count, order_by, ascending);
 
     page_len += table_len;
 
@@ -441,15 +462,17 @@ char *build_page(char *path, char *page_template, enum OrderBy order_by, bool so
     return ret;
 }
 
-void handle_client(int sd, char *path, char *page_template) {
+void handle_client(int sd, Request req, char *page_template) {
 
     pid_t pid = fork();
 
     if (pid != 0)
         return;
 
+    char *path = req.path;
+
     if (strcmp(path, "") == 0) {
-        char *page = build_page(path, page_template, Name, false);
+        char *page = build_page(req, page_template);
         write(sd, page, strlen(page));
         shutdown(sd, SHUT_WR);
         free(page);
@@ -461,7 +484,7 @@ void handle_client(int sd, char *path, char *page_template) {
         fprintf(stderr, "Error getting stats, for \"%s\" ", path);
         printf("errno = %d\n", errno);
 
-        char *page = build_page(path, page_template, Name, false);
+        char *page = build_page(req, page_template);
         write(sd, page, strlen(page));
         shutdown(sd, SHUT_WR);
         free(page);
@@ -470,7 +493,7 @@ void handle_client(int sd, char *path, char *page_template) {
 
     if (S_ISDIR(file_stat.st_mode)) {
         printf("IS DIR\n");
-        char *page = build_page(path, page_template, Name, false);
+        char *page = build_page(req, page_template);
         write(sd, page, strlen(page));
         shutdown(sd, SHUT_WR);
         free(page);
@@ -488,10 +511,6 @@ void handle_client(int sd, char *path, char *page_template) {
 //                     ./server 31431 /rootpath
 int main(int argc, char *argv[]) {
 #pragma region Server Initialization
-    if (strcmp(argv[argc - 1], "test") == 0) {
-        return run_tests(argc, argv);
-    }
-
     if (argc < 3) {
         printf("usage: %s <server_port> <root_directory>\n", argv[0]);
         exit(1);
@@ -636,11 +655,12 @@ int main(int argc, char *argv[]) {
                     clients[i] = 0;
                 } else {
                     // HANDLING INCOMING DATA
-                    char *path = cmtorp(buffer);
-                    path = clearpath(path);
-                    handle_client(sd, path, page_template);
+                    Request req = cmtor(buffer);
 
-                    free(path);
+                    handle_client(sd, req, page_template);
+
+                    free(req.path);
+                    free(req.options.pairs);
                 }
             }
         }
