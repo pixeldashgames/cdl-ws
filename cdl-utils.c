@@ -132,6 +132,9 @@ int findstr(char *str, char *tok) {
 }
 
 int findc(char *str, char t) {
+    if (str == NULL)
+        return -1;
+
     int n = strlen(str);
     for (int i = 0; i < n; i++)
         if (str[i] == t)

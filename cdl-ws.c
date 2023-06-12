@@ -15,9 +15,10 @@
 #include <time.h>
 #include "cdl-utils.h"
 #include <errno.h>
+#include <sys/poll.h>
 
 #define MAX_CLIENTS 1024
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 16384
 
 enum OrderBy {
     Name,
@@ -52,6 +53,7 @@ typedef struct Request Request;
 struct Request {
     char *path;
     struct Dictionary options;
+    bool valid;
 };
 
 // returns a <a> html link for a given path.
@@ -100,14 +102,30 @@ char *clearpath(char *path) {
 
 // returns a request path extracted from a given client message
 Request cmtor(char *message) {
+    if (message == NULL) {
+        Request ret = {NULL, {NULL, 0}, false};
+        return ret;
+    }
+
     int end = findc(message, '\n');
     if (end == -1)
         end = (int) strlen(message);
 
     struct JaggedCharArray req = splitnstr(message, ' ', end, true);
+
+    if (req.count < 2) {
+        Request ret = {NULL, {NULL, 0}, false};
+        return ret;
+    }
+
     req.arr++;
     req.count--;
     bool delslash = false;
+    if (strlen(*req.arr) == 0) {
+        Request ret = {NULL, {NULL, 0}, false};
+        return ret;
+    }
+
     if (req.arr[0][0] == '/') {
         req.arr[0]++;
         delslash = true;
@@ -128,7 +146,7 @@ Request cmtor(char *message) {
     free(req_str);
 
     if (strlen(fixed_spaces) == 0) {
-        Request ret = {"", {NULL, 0}};
+        Request ret = {"", {NULL, 0}, true};
         return ret;
     }
 
@@ -137,7 +155,7 @@ Request cmtor(char *message) {
     char *path = split_req.arr[0];
 
     if (split_req.count == 1 || strlen(split_req.arr[1]) == 0) {
-        Request ret = {path, {NULL, 0}};
+        Request ret = {path, {NULL, 0}, true};
         return ret;
     }
 
@@ -163,7 +181,7 @@ Request cmtor(char *message) {
         free(pair.arr);
     }
 
-    Request ret = {path, options};
+    Request ret = {path, options, true};
 
     return ret;
 }
@@ -207,13 +225,36 @@ size_t sendfile_p(char *p, int clientfd) {
     write(clientfd, header, strlen(header));
 
     // how much of the file has been sent
-    off_t offset = 0;
 
-    size_t rc = sendfile(clientfd, fd, &offset, (size_t) st.st_size);
+    struct pollfd pfd = {.fd = clientfd, .events = POLLOUT};
+    off_t offset = 0;
+    size_t remaining_bytes = st.st_size;
+    do {
+        size_t ret = sendfile(clientfd, fd, &offset, remaining_bytes);
+        if (ret >= 0) {
+            remaining_bytes -= ret;
+        } else if (errno == EAGAIN) {
+            int pollresult = poll(&pfd, 1, -1);
+            if (pollresult == -1) {
+                perror("poll");
+                return remaining_bytes;
+            } else {
+                if (pfd.revents & POLLOUT) {
+                    continue;
+                } else {
+                    printf("Unexpected event on file descriptor\n");
+                    return remaining_bytes;
+                }
+            }
+        } else {
+            perror("sendfile");
+            return remaining_bytes;
+        }
+    } while (remaining_bytes > 0);
 
     close(fd);
 
-    return rc;
+    return 0;
 }
 
 int count_entries(char *path) {
@@ -625,7 +666,7 @@ int main(int argc, char *argv[]) {
     int max_sd, i, sd;
 
     // buffer : Input buffer.
-    char buffer[BUFFER_SIZE] = "";
+    char *buffer = calloc(BUFFER_SIZE, sizeof(char));
 
     // set of file descriptors for client read 'streams'
     fd_set readfds;
@@ -734,7 +775,10 @@ int main(int argc, char *argv[]) {
                     // HANDLING INCOMING DATA
                     Request req = cmtor(buffer);
 
-                    handle_client(sd, req, page_template);
+                    if (req.valid)
+                        handle_client(sd, req, page_template);
+                    else
+                        printf("Invalid request:\n%s\n", buffer);
 
                     free(req.options.pairs);
                 }
